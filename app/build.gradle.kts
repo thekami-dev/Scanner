@@ -1,5 +1,6 @@
 import java.util.Properties
 import java.io.FileInputStream
+import java.io.ByteArrayOutputStream
 
 plugins {
     id("com.android.application")
@@ -14,6 +15,22 @@ if (hasKeystoreProperties) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
+fun gitCommitCount(): Int {
+    return try {
+        val stdout = ByteArrayOutputStream()
+        exec {
+            commandLine("git", "rev-list", "--count", "HEAD")
+            standardOutput = stdout
+        }
+        stdout.toString().trim().toInt()
+    } catch (e: Exception) {
+        1
+    }
+}
+
+val appVersionCode = gitCommitCount()
+val appVersionName = "1.0.$appVersionCode"
+
 android {
     namespace = "com.scann.thekami"
     compileSdk = 35
@@ -22,8 +39,8 @@ android {
         applicationId = "com.scann.thekami"
         minSdk = 24
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = appVersionCode
+        versionName = appVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
