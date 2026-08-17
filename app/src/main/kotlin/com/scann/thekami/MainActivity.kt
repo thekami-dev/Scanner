@@ -16,6 +16,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.scann.thekami.model.ScanResult
+import com.scann.thekami.model.ScanAction
 import com.scann.thekami.ui.screens.ResultScreen
 import com.scann.thekami.ui.screens.ScannerScreen
 import com.scann.thekami.util.ScanActionHandler
