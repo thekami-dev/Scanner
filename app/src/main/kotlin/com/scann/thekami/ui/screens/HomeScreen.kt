@@ -2,7 +2,9 @@ package com.scann.thekami.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -15,6 +17,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun HomeScreen(
     onScanClick: () -> Unit,
+    onGenerateClick: () -> Unit,
     onSettingsClick: () -> Unit
 ) {
     Scaffold(
@@ -67,6 +70,18 @@ fun HomeScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+
+            Spacer(modifier = Modifier.height(40.dp))
+
+            OutlinedButton(
+                onClick = onGenerateClick,
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth(0.7f)
+            ) {
+                Icon(Icons.Filled.QrCode2, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Create a QR Code")
+            }
         }
     }
 }

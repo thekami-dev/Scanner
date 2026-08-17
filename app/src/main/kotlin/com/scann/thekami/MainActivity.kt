@@ -5,22 +5,23 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.scann.thekami.model.ScanAction
 import com.scann.thekami.model.ScanResult
+import com.scann.thekami.ui.screens.GeneratorScreen
 import com.scann.thekami.ui.screens.HomeScreen
 import com.scann.thekami.ui.screens.ResultScreen
 import com.scann.thekami.ui.screens.ScannerScreen
 import com.scann.thekami.ui.screens.SettingsScreen
-import com.scann.thekami.util.ScanActionHandler
 import com.scann.thekami.ui.theme.ScannTheme
+import com.scann.thekami.util.ScanActionHandler
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,6 +36,7 @@ class MainActivity : ComponentActivity() {
 private sealed class Screen {
     object Home : Screen()
     object Scanner : Screen()
+    object Generator : Screen()
     object Settings : Screen()
     data class Result(val scanResult: ScanResult) : Screen()
 }
@@ -50,6 +52,7 @@ fun ScannApp() {
                 is Screen.Home -> {
                     HomeScreen(
                         onScanClick = { currentScreen = Screen.Scanner },
+                        onGenerateClick = { currentScreen = Screen.Generator },
                         onSettingsClick = { currentScreen = Screen.Settings }
                     )
                 }
@@ -58,6 +61,11 @@ fun ScannApp() {
                         onBarcodeScanned = { result ->
                             currentScreen = Screen.Result(result)
                         },
+                        onBack = { currentScreen = Screen.Home }
+                    )
+                }
+                is Screen.Generator -> {
+                    GeneratorScreen(
                         onBack = { currentScreen = Screen.Home }
                     )
                 }
