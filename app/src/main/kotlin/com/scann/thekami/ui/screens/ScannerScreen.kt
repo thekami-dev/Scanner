@@ -2,6 +2,7 @@ package com.scann.thekami.ui.screens
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.os.Build
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
@@ -11,6 +12,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.PhotoLibrary
@@ -26,16 +28,25 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import com.scann.thekami.camera.BarcodeAnalyzer
 import com.scann.thekami.model.ScanResult
+import com.scann.thekami.util.GalleryScanner
+import kotlinx.coroutines.launch
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 @Composable
 fun ScannerScreen(
     onBarcodeScanned: (ScanResult) -> Unit,
-    onGalleryClick: () -> Unit
+    onBack: () -> Unit
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val coroutineScope = rememberCoroutineScope()
+
+    val galleryPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        Manifest.permission.READ_MEDIA_IMAGES
+    } else {
+        Manifest.permission.READ_EXTERNAL_STORAGE
+    }
 
     var hasCameraPermission by remember {
         mutableStateOf(
@@ -47,24 +58,68 @@ fun ScannerScreen(
     var isFlashOn by remember { mutableStateOf(false) }
     var camera by remember { mutableStateOf<androidx.camera.core.Camera?>(null) }
     var hasScanned by remember { mutableStateOf(false) }
+    var isProcessingGalleryImage by remember { mutableStateOf(false) }
 
     val cameraExecutor: ExecutorService = remember { Executors.newSingleThreadExecutor() }
 
-    val permissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+    val cameraPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
     ) { granted ->
         hasCameraPermission = granted
     }
 
+    val galleryPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            galleryPickerLauncherTrigger.value += 1
+        }
+    }
+
+    // Trigger holder to open picker after permission granted
+    val galleryPickerLauncherTrigger = remember { mutableIntStateOf(0) }
+
+    val galleryPickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null && !hasScanned) {
+            isProcessingGalleryImage = true
+            coroutineScope.launch {
+                val result = GalleryScanner.scanImage(context, uri)
+                isProcessingGalleryImage = false
+                if (result != null) {
+                    hasScanned = true
+                    onBarcodeScanned(result)
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(galleryPickerLauncherTrigger.intValue) {
+        if (galleryPickerLauncherTrigger.intValue > 0) {
+            galleryPickerLauncher.launch("image/*")
+        }
+    }
+
     LaunchedEffect(Unit) {
         if (!hasCameraPermission) {
-            permissionLauncher.launch(Manifest.permission.CAMERA)
+            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
 
     DisposableEffect(Unit) {
         onDispose {
             cameraExecutor.shutdown()
+        }
+    }
+
+    fun onGalleryClick() {
+        val granted = ContextCompat.checkSelfPermission(context, galleryPermission) ==
+            PackageManager.PERMISSION_GRANTED
+        if (granted) {
+            galleryPickerLauncher.launch("image/*")
+        } else {
+            galleryPermissionLauncher.launch(galleryPermission)
         }
     }
 
@@ -105,7 +160,7 @@ fun ScannerScreen(
                                 imageAnalysis
                             )
                         } catch (e: Exception) {
-                            // Camera bind failed — handled by UI showing no preview
+                            // Camera bind failed
                         }
                     }, ContextCompat.getMainExecutor(ctx))
 
@@ -113,20 +168,6 @@ fun ScannerScreen(
                 },
                 modifier = Modifier.fillMaxSize()
             )
-
-            // Scan frame overlay
-            Box(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .size(260.dp)
-                    .background(Color.Transparent)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Transparent)
-                )
-            }
 
             // Top bar
             Row(
@@ -138,11 +179,13 @@ fun ScannerScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Scann",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = Color.White
-                )
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier
+                        .background(Color.Black.copy(alpha = 0.4f), RoundedCornerShape(50))
+                ) {
+                    Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                }
 
                 IconButton(
                     onClick = {
@@ -170,12 +213,19 @@ fun ScannerScreen(
                 horizontalArrangement = Arrangement.Center
             ) {
                 FilledTonalButton(
-                    onClick = onGalleryClick,
+                    onClick = { onGalleryClick() },
+                    enabled = !isProcessingGalleryImage,
                     modifier = Modifier.height(52.dp)
                 ) {
-                    Icon(Icons.Filled.PhotoLibrary, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Scan from Gallery")
+                    if (isProcessingGalleryImage) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Scanning...")
+                    } else {
+                        Icon(Icons.Filled.PhotoLibrary, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Scan from Gallery")
+                    }
                 }
             }
         } else {
@@ -192,7 +242,7 @@ fun ScannerScreen(
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) }) {
+                Button(onClick = { cameraPermissionLauncher.launch(Manifest.permission.CAMERA) }) {
                     Text("Grant Permission")
                 }
             }
