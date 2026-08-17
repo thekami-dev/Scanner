@@ -59,6 +59,7 @@ fun ScannerScreen(
     var camera by remember { mutableStateOf<androidx.camera.core.Camera?>(null) }
     var hasScanned by remember { mutableStateOf(false) }
     var isProcessingGalleryImage by remember { mutableStateOf(false) }
+    val galleryPickerLauncherTrigger = remember { mutableIntStateOf(0) }
 
     val cameraExecutor: ExecutorService = remember { Executors.newSingleThreadExecutor() }
 
@@ -67,17 +68,6 @@ fun ScannerScreen(
     ) { granted ->
         hasCameraPermission = granted
     }
-
-    val galleryPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-        contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) {
-            galleryPickerLauncherTrigger.value += 1
-        }
-    }
-
-    // Trigger holder to open picker after permission granted
-    val galleryPickerLauncherTrigger = remember { mutableIntStateOf(0) }
 
     val galleryPickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
@@ -92,6 +82,14 @@ fun ScannerScreen(
                     onBarcodeScanned(result)
                 }
             }
+        }
+    }
+
+    val galleryPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            galleryPickerLauncherTrigger.intValue += 1
         }
     }
 
