@@ -5,7 +5,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
@@ -21,6 +20,7 @@ import com.scann.thekami.ui.screens.ResultScreen
 import com.scann.thekami.ui.screens.ScannerScreen
 import com.scann.thekami.ui.screens.SettingsScreen
 import com.scann.thekami.util.ScanActionHandler
+import com.scann.thekami.ui.theme.ScannTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -44,7 +44,7 @@ fun ScannApp() {
     val context = LocalContext.current
     var currentScreen by remember { mutableStateOf<Screen>(Screen.Home) }
 
-    MaterialTheme {
+    ScannTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
             when (val screen = currentScreen) {
                 is Screen.Home -> {
