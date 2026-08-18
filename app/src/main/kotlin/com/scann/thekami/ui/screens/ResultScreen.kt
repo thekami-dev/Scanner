@@ -104,7 +104,10 @@ private fun ResultContent(type: ScanResultType) {
         is ScanResultType.Location -> Text("Lat: ${type.latitude}, Lng: ${type.longitude}")
         is ScanResultType.WifiNetwork -> {
             Text("Network: ${type.ssid}")
-            Text("Security: ${type.encryptionType ?: "Unknown"}")
+            Text("Security: ${type.encryptionType ?: "Open (No Password)"}")
+            if (!type.password.isNullOrBlank()) {
+                Text("Password: ${type.password}")
+            }
         }
         is ScanResultType.Contact -> {
             type.name?.let { Text("Name: $it") }

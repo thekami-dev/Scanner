@@ -99,31 +99,46 @@ object ScanActionHandler {
     }
 
     private fun connectWifi(context: Context, ssid: String, password: String?, encryptionType: String?) {
+        if (ssid.isBlank()) {
+            toast(context, "Invalid Wi-Fi network")
+            return
+        }
+
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
             try {
-                val suggestion = android.net.wifi.WifiNetworkSuggestion.Builder()
+                val builder = android.net.wifi.WifiNetworkSuggestion.Builder()
                     .setSsid(ssid)
-                    .apply {
-                        if (!password.isNullOrBlank()) {
-                            when (encryptionType) {
-                                "WPA" -> setWpa2Passphrase(password)
-                                else -> setWpa2Passphrase(password)
-                            }
-                        }
-                    }
-                    .build()
 
-                val wifiManager = context.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
+                if (!password.isNullOrBlank()) {
+                    when (encryptionType) {
+                        "WEP" -> {
+                            // WEP is not supported by WifiNetworkSuggestion API.
+                            copyToClipboard(context, password)
+                            toast(context, "WEP networks aren't supported for auto-connect. Password copied.")
+                            return
+                        }
+                        else -> builder.setWpa2Passphrase(password)
+                    }
+                }
+
+                val suggestion = builder.build()
+
                 val intent = Intent(android.provider.Settings.ACTION_WIFI_ADD_NETWORKS).apply {
                     putParcelableArrayListExtra(
                         android.provider.Settings.EXTRA_WIFI_NETWORK_LIST,
                         arrayListOf(suggestion)
                     )
                 }
-                context.startActivity(intent)
+
+                if (intent.resolveActivity(context.packageManager) != null) {
+                    context.startActivity(intent)
+                } else {
+                    copyToClipboard(context, password ?: ssid)
+                    toast(context, "Could not open Wi-Fi settings. Password copied instead.")
+                }
             } catch (e: Exception) {
                 copyToClipboard(context, password ?: ssid)
-                toast(context, "Could not connect automatically. Password copied instead.")
+                toast(context, "Could not connect automatically: ${e.message ?: "unknown error"}")
             }
         } else {
             copyToClipboard(context, password ?: ssid)
