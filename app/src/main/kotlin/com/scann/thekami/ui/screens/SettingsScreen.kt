@@ -21,7 +21,8 @@ import com.scann.thekami.ads.NativeAdCard
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onAboutClick: () -> Unit
 ) {
     val context = LocalContext.current
 
@@ -57,16 +58,9 @@ fun SettingsScreen(
             SettingsCard {
                 SettingsRow(
                     icon = Icons.Filled.Info,
-                    title = "Scann",
-                    subtitle = "Version ${BuildConfig.VERSION_NAME}",
-                    onClick = null
-                )
-                SettingsDivider()
-                SettingsRow(
-                    icon = Icons.Filled.PrivacyTip,
-                    title = "Privacy",
-                    subtitle = "No account, no data collection, works offline",
-                    onClick = null
+                    title = "About Scann",
+                    subtitle = "Version ${BuildConfig.VERSION_NAME} · Features & privacy",
+                    onClick = onAboutClick
                 )
             }
 
@@ -79,6 +73,13 @@ fun SettingsScreen(
                     title = "Website",
                     subtitle = "thekami.tech",
                     onClick = { openUrl("https://www.thekami.tech/") }
+                )
+                SettingsDivider()
+                SettingsRow(
+                    icon = Icons.Filled.Article,
+                    title = "Blog",
+                    subtitle = "Read about Scann's development",
+                    onClick = { openUrl("https://blog.thekami.tech/posts/scann/") }
                 )
                 SettingsDivider()
                 SettingsRow(
