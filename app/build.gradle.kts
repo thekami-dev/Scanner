@@ -123,3 +123,9 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
+
+configurations.all {
+    resolutionStrategy {
+        force("com.google.guava:guava:33.3.1-android")
+    }
+}
