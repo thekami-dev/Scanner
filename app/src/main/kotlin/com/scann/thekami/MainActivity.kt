@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -48,6 +49,10 @@ fun ScannApp() {
 
     ScannTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
+            BackHandler(enabled = currentScreen !is Screen.Home) {
+                currentScreen = Screen.Home
+            }
+
             when (val screen = currentScreen) {
                 is Screen.Home -> {
                     HomeScreen(
