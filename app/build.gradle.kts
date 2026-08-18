@@ -33,12 +33,12 @@ val appVersionName = "1.0.$appVersionCode"
 
 android {
     namespace = "com.scann.thekami"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.scann.thekami"
         minSdk = 24
-        targetSdk = 35
+        targetSdk = 36
         versionCode = appVersionCode
         versionName = appVersionName
 
