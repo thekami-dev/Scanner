@@ -58,12 +58,8 @@ fun GeneratorScreen() {
     var smsNumber by remember { mutableStateOf("") }
     var smsMessage by remember { mutableStateOf("") }
 
-    LaunchedEffect(
-        selectedType, textValue, urlValue, wifiSsid, wifiPassword, wifiSecurity, wifiHidden,
-        contactName, contactPhone, contactEmail, contactOrg, phoneValue,
-        emailAddress, emailSubject, emailBody, smsNumber, smsMessage
-    ) {
-        encodedContent = when (selectedType) {
+    fun buildEncodedContent(): String {
+        return when (selectedType) {
             QrContentType.TEXT -> QrContentEncoder.encodeText(textValue)
             QrContentType.URL -> if (urlValue.isNotBlank()) QrContentEncoder.encodeUrl(urlValue) else ""
             QrContentType.WIFI -> if (wifiSsid.isNotBlank()) {
@@ -80,12 +76,22 @@ fun GeneratorScreen() {
                 QrContentEncoder.encodeSms(smsNumber, smsMessage)
             } else ""
         }
+    }
 
-        qrBitmap = if (encodedContent.isNotBlank()) {
-            QrCodeGenerator.generate(encodedContent)
-        } else {
-            null
-        }
+    fun generateQr() {
+        val content = buildEncodedContent()
+        encodedContent = content
+        qrBitmap = if (content.isNotBlank()) QrCodeGenerator.generate(content) else null
+    }
+
+    // Reset the generated QR whenever the user changes the type or edits a field,
+    // so they must press Generate again before seeing a new code.
+    LaunchedEffect(
+        selectedType, textValue, urlValue, wifiSsid, wifiPassword, wifiSecurity, wifiHidden,
+        contactName, contactPhone, contactEmail, contactOrg, phoneValue,
+        emailAddress, emailSubject, emailBody, smsNumber, smsMessage
+    ) {
+        qrBitmap = null
     }
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -341,15 +347,28 @@ fun GeneratorScreen() {
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                Button(
+                    onClick = { generateQr() },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .aspectRatio(1f)
+                        .height(52.dp)
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        if (qrBitmap != null) {
+                    Icon(Icons.Filled.QrCode2, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Generate QR Code")
+                }
+
+                if (qrBitmap != null) {
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(1f)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
                             Image(
                                 bitmap = qrBitmap!!.asImageBitmap(),
                                 contentDescription = "Generated QR Code",
@@ -357,39 +376,31 @@ fun GeneratorScreen() {
                                     .fillMaxSize()
                                     .padding(24.dp)
                             )
-                        } else {
-                            Text(
-                                text = "Fill in the details to generate a QR code",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
                         }
                     }
-                }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = { saveQrToGallery() },
-                        enabled = qrBitmap != null,
-                        modifier = Modifier.weight(1f)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Icon(Icons.Filled.Download, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Save")
-                    }
-                    Button(
-                        onClick = { shareQr() },
-                        enabled = qrBitmap != null,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(Icons.Filled.Share, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Share")
+                        OutlinedButton(
+                            onClick = { saveQrToGallery() },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Filled.Download, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Save")
+                        }
+                        Button(
+                            onClick = { shareQr() },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Filled.Share, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Share")
+                        }
                     }
                 }
 
