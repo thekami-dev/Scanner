@@ -34,9 +34,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GeneratorScreen(
-    onBack: () -> Unit
-) {
+fun GeneratorScreen() {
     val context = LocalContext.current
     var selectedType by remember { mutableStateOf(QrContentType.TEXT) }
     var qrBitmap by remember { mutableStateOf<Bitmap?>(null) }
@@ -165,12 +163,7 @@ fun GeneratorScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Generate QR Code") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                }
+                title = { Text("Create QR Code") }
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -400,7 +393,7 @@ fun GeneratorScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(100.dp))
             }
         }
     }
