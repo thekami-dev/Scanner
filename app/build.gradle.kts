@@ -108,6 +108,7 @@ dependencies {
     implementation("androidx.camera:camera-camera2:1.4.0")
     implementation("androidx.camera:camera-lifecycle:1.4.0")
     implementation("androidx.camera:camera-view:1.4.0")
+    implementation("com.google.guava:guava:33.3.1-android")
 
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
     implementation("com.google.android.gms:play-services-ads:23.6.0")
@@ -126,4 +127,7 @@ dependencies {
 
 configurations.all {
     exclude(group = "com.google.guava", module = "listenablefuture")
+    resolutionStrategy {
+        force("com.google.guava:guava:33.3.1-android")
+    }
 }
