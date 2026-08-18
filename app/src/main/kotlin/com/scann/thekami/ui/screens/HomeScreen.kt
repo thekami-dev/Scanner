@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.scann.thekami.ads.NativeAdCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,6 +83,10 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Create a QR Code")
             }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            NativeAdCard(modifier = Modifier.fillMaxWidth())
         }
     }
 }

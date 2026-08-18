@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.scann.thekami.BuildConfig
+import com.scann.thekami.ads.NativeAdCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -107,7 +108,11 @@ fun SettingsScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
+
+            NativeAdCard(modifier = Modifier.fillMaxWidth())
+
+            Spacer(modifier = Modifier.height(20.dp))
 
             Text(
                 text = "Made with care by TheKami",
