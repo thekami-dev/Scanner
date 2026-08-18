@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -15,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.scann.thekami.model.ScanAction
 import com.scann.thekami.model.ScanResult
+import com.scann.thekami.ui.screens.AboutScreen
 import com.scann.thekami.ui.screens.GeneratorScreen
 import com.scann.thekami.ui.screens.HomeScreen
 import com.scann.thekami.ui.screens.ResultScreen
@@ -38,6 +40,7 @@ private sealed class Screen {
     object Scanner : Screen()
     object Generator : Screen()
     object Settings : Screen()
+    object About : Screen()
     data class Result(val scanResult: ScanResult) : Screen()
 }
 
@@ -48,6 +51,13 @@ fun ScannApp() {
 
     ScannTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
+            BackHandler(enabled = currentScreen !is Screen.Home) {
+                currentScreen = when (currentScreen) {
+                    is Screen.About -> Screen.Settings
+                    else -> Screen.Home
+                }
+            }
+
             when (val screen = currentScreen) {
                 is Screen.Home -> {
                     HomeScreen(
@@ -71,7 +81,13 @@ fun ScannApp() {
                 }
                 is Screen.Settings -> {
                     SettingsScreen(
-                        onBack = { currentScreen = Screen.Home }
+                        onBack = { currentScreen = Screen.Home },
+                        onAboutClick = { currentScreen = Screen.About }
+                    )
+                }
+                is Screen.About -> {
+                    AboutScreen(
+                        onBack = { currentScreen = Screen.Settings }
                     )
                 }
                 is Screen.Result -> {

@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.scann.thekami.model.ScanResult
 import com.scann.thekami.model.ScanResultType
+import com.scann.thekami.ads.NativeAdCard
 import com.scann.thekami.model.ScanAction
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -65,6 +66,10 @@ fun ResultScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            NativeAdCard(modifier = Modifier.fillMaxWidth())
         }
     }
 }
