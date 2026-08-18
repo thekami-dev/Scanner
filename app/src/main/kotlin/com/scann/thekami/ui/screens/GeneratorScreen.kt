@@ -23,6 +23,14 @@ import com.scann.thekami.model.QrContentType
 import com.scann.thekami.util.QrCodeGenerator
 import java.io.File
 import java.io.FileOutputStream
+import android.content.ContentValues
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,6 +90,53 @@ fun GeneratorScreen(
         }
     }
 
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
+
+    fun saveQrToGallery() {
+        val bitmap = qrBitmap ?: return
+        try {
+            val filename = "Scann_QR_${System.currentTimeMillis()}.png"
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val contentValues = ContentValues().apply {
+                    put(MediaStore.Images.Media.DISPLAY_NAME, filename)
+                    put(MediaStore.Images.Media.MIME_TYPE, "image/png")
+                    put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/Scann")
+                }
+                val uri = context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+                if (uri != null) {
+                    context.contentResolver.openOutputStream(uri)?.use { out ->
+                        bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                    }
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar("QR code saved to Pictures/Scann")
+                    }
+                } else {
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar("Failed to save QR code")
+                    }
+                }
+            } else {
+                val picturesDir = File(
+                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
+                    "Scann"
+                )
+                picturesDir.mkdirs()
+                val file = File(picturesDir, filename)
+                FileOutputStream(file).use { out ->
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                }
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar("QR code saved to Pictures/Scann")
+                }
+            }
+        } catch (e: Exception) {
+            coroutineScope.launch {
+                snackbarHostState.showSnackbar("Failed to save QR code: ${e.message}")
+            }
+        }
+    }
+
     fun shareQr() {
         val bitmap = qrBitmap ?: return
         try {
@@ -117,7 +172,8 @@ fun GeneratorScreen(
                     }
                 }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -320,14 +376,28 @@ fun GeneratorScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Button(
-                    onClick = { shareQr() },
-                    enabled = qrBitmap != null,
-                    modifier = Modifier.fillMaxWidth()
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Icon(Icons.Filled.Share, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Share QR Code")
+                    OutlinedButton(
+                        onClick = { saveQrToGallery() },
+                        enabled = qrBitmap != null,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Filled.Download, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Save")
+                    }
+                    Button(
+                        onClick = { shareQr() },
+                        enabled = qrBitmap != null,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Filled.Share, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Share")
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
