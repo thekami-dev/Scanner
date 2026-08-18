@@ -1,45 +1,28 @@
 package com.scann.thekami.ui.screens
 
-import android.content.Intent
 import android.graphics.Bitmap
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.core.content.FileProvider
 import com.scann.thekami.model.QrContentEncoder
 import com.scann.thekami.model.QrContentType
 import com.scann.thekami.util.QrCodeGenerator
-import java.io.File
-import java.io.FileOutputStream
-import android.content.ContentValues
-import android.os.Build
-import android.os.Environment
-import android.provider.MediaStore
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.QrCode2
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GeneratorScreen() {
-    val context = LocalContext.current
     var selectedType by remember { mutableStateOf(QrContentType.TEXT) }
-    var qrBitmap by remember { mutableStateOf<Bitmap?>(null) }
-    var encodedContent by remember { mutableStateOf("") }
+    var generatedBitmap by remember { mutableStateOf<Bitmap?>(null) }
 
     // Form fields
     var textValue by remember { mutableStateOf("") }
@@ -81,106 +64,28 @@ fun GeneratorScreen() {
 
     fun generateQr() {
         val content = buildEncodedContent()
-        encodedContent = content
-        qrBitmap = if (content.isNotBlank()) QrCodeGenerator.generate(content) else null
+        generatedBitmap = if (content.isNotBlank()) QrCodeGenerator.generate(content) else null
     }
 
-    // Reset the generated QR whenever the user changes the type or edits a field,
-    // so they must press Generate again before seeing a new code.
-    LaunchedEffect(
-        selectedType, textValue, urlValue, wifiSsid, wifiPassword, wifiSecurity, wifiHidden,
-        contactName, contactPhone, contactEmail, contactOrg, phoneValue,
-        emailAddress, emailSubject, emailBody, smsNumber, smsMessage
-    ) {
-        qrBitmap = null
-    }
-
-    val snackbarHostState = remember { SnackbarHostState() }
-    val coroutineScope = rememberCoroutineScope()
-
-    fun saveQrToGallery() {
-        val bitmap = qrBitmap ?: return
-        try {
-            val filename = "Scann_QR_${System.currentTimeMillis()}.png"
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                val contentValues = ContentValues().apply {
-                    put(MediaStore.Images.Media.DISPLAY_NAME, filename)
-                    put(MediaStore.Images.Media.MIME_TYPE, "image/png")
-                    put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/Scann")
-                }
-                val uri = context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
-                if (uri != null) {
-                    context.contentResolver.openOutputStream(uri)?.use { out ->
-                        bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
-                    }
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar("QR code saved to Pictures/Scann")
-                    }
-                } else {
-                    coroutineScope.launch {
-                        snackbarHostState.showSnackbar("Failed to save QR code")
-                    }
-                }
-            } else {
-                val picturesDir = File(
-                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
-                    "Scann"
-                )
-                picturesDir.mkdirs()
-                val file = File(picturesDir, filename)
-                FileOutputStream(file).use { out ->
-                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
-                }
-                coroutineScope.launch {
-                    snackbarHostState.showSnackbar("QR code saved to Pictures/Scann")
-                }
-            }
-        } catch (e: Exception) {
-            coroutineScope.launch {
-                snackbarHostState.showSnackbar("Failed to save QR code: ${e.message}")
-            }
-        }
-    }
-
-    fun shareQr() {
-        val bitmap = qrBitmap ?: return
-        try {
-            val cacheDir = File(context.cacheDir, "qr_share")
-            cacheDir.mkdirs()
-            val file = File(cacheDir, "scann_qr.png")
-            FileOutputStream(file).use { out ->
-                bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
-            }
-            val uri = FileProvider.getUriForFile(
-                context,
-                "${context.packageName}.fileprovider",
-                file
-            )
-            val intent = Intent(Intent.ACTION_SEND).apply {
-                type = "image/png"
-                putExtra(Intent.EXTRA_STREAM, uri)
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-            context.startActivity(Intent.createChooser(intent, "Share QR Code"))
-        } catch (e: Exception) {
-            // Sharing failed silently
-        }
+    val currentBitmap = generatedBitmap
+    if (currentBitmap != null) {
+        QrResultScreen(
+            qrBitmap = currentBitmap,
+            onBack = { generatedBitmap = null }
+        )
+        return
     }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Create QR Code") }
-            )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+            TopAppBar(title = { Text("Create QR Code") })
+        }
     ) { padding ->
         Column(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
         ) {
-            // Type selector chips
             LazyRow(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -197,9 +102,9 @@ fun GeneratorScreen() {
             Column(
                 modifier = Modifier
                     .weight(1f)
+                    .verticalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp)
             ) {
-                // Dynamic form based on selected type
                 when (selectedType) {
                     QrContentType.TEXT -> {
                         OutlinedTextField(
@@ -346,7 +251,7 @@ fun GeneratorScreen() {
                     }
                 }
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
                 Button(
                     onClick = { generateQr() },
@@ -359,53 +264,7 @@ fun GeneratorScreen() {
                     Text("Generate QR Code")
                 }
 
-                if (qrBitmap != null) {
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    Surface(
-                        shape = RoundedCornerShape(20.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(1f)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Image(
-                                bitmap = qrBitmap!!.asImageBitmap(),
-                                contentDescription = "Generated QR Code",
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(24.dp)
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = { saveQrToGallery() },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(Icons.Filled.Download, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Save")
-                        }
-                        Button(
-                            onClick = { shareQr() },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(Icons.Filled.Share, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Share")
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(100.dp))
+                Spacer(modifier = Modifier.height(140.dp))
             }
         }
     }
