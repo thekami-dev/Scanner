@@ -42,6 +42,8 @@ jobs:
         with:
           name: scann-debug-apk
           path: app/build/outputs/apk/debug/*.apk
+          retention-days: 7
+          overwrite: true
 
       - name: Decode keystore
         env:
@@ -69,6 +71,8 @@ jobs:
         with:
           name: scann-release-aab
           path: app/build/outputs/bundle/release/*.aab
+          retention-days: 7
+          overwrite: true
 
       - name: Clean up sensitive files
         if: always()

@@ -1,5 +1,6 @@
 package com.scann.thekami
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -25,11 +26,33 @@ import com.scann.thekami.ui.theme.ScannTheme
 import com.scann.thekami.util.ScanActionHandler
 
 class MainActivity : ComponentActivity() {
+
+    private var pendingDeepLinkTab by mutableStateOf<NavTab?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        pendingDeepLinkTab = resolveDeepLinkTab(intent)
         setContent {
-            ScannApp()
+            ScannApp(
+                initialTab = pendingDeepLinkTab,
+                onDeepLinkConsumed = { pendingDeepLinkTab = null }
+            )
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        pendingDeepLinkTab = resolveDeepLinkTab(intent)
+    }
+
+    private fun resolveDeepLinkTab(intent: Intent?): NavTab? {
+        val uri = intent?.data ?: return null
+        return when (uri.host) {
+            "scan" -> NavTab.SCAN
+            "create" -> NavTab.CREATE
+            else -> null
         }
     }
 }
@@ -41,26 +64,38 @@ private sealed class Overlay {
 }
 
 @Composable
-fun ScannApp() {
+fun ScannApp(
+    initialTab: NavTab? = null,
+    onDeepLinkConsumed: () -> Unit = {}
+) {
     val context = LocalContext.current
-    var selectedTab by remember { mutableStateOf(NavTab.SCAN) }
+    var selectedTab by remember { mutableStateOf(initialTab ?: NavTab.SCAN) }
     var overlay by remember { mutableStateOf<Overlay>(Overlay.None) }
+
+    LaunchedEffect(initialTab) {
+        if (initialTab != null) {
+            selectedTab = initialTab
+            overlay = Overlay.None
+            onDeepLinkConsumed()
+        }
+    }
 
     ScannTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
             BackHandler(enabled = overlay !is Overlay.None) {
-                overlay = if (overlay is Overlay.About) Overlay.None else Overlay.None
+                overlay = Overlay.None
             }
 
             Box(modifier = Modifier.fillMaxSize()) {
-                // Base tab content
                 when (selectedTab) {
                     NavTab.SCAN -> {
-                        ScannerScreen(
-                            onBarcodeScanned = { result ->
-                                overlay = Overlay.Result(result)
-                            }
-                        )
+                        key(overlay is Overlay.None) {
+                            ScannerScreen(
+                                onBarcodeScanned = { result ->
+                                    overlay = Overlay.Result(result)
+                                }
+                            )
+                        }
                     }
                     NavTab.CREATE -> {
                         GeneratorScreen()
@@ -72,7 +107,6 @@ fun ScannApp() {
                     }
                 }
 
-                // Floating bottom nav — hidden while an overlay (Result/About) is showing
                 if (overlay is Overlay.None) {
                     FloatingBottomNav(
                         selectedTab = selectedTab,
@@ -84,7 +118,6 @@ fun ScannApp() {
                     )
                 }
 
-                // Overlays
                 when (val current = overlay) {
                     is Overlay.Result -> {
                         ResultScreen(

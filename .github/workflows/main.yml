@@ -62,6 +62,8 @@ jobs:
         with:
           name: scann-release-aab
           path: app/build/outputs/bundle/release/*.aab
+          retention-days: 30
+          overwrite: true
 
       - name: Clean up sensitive files
         if: always()
