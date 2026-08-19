@@ -8,10 +8,16 @@ import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.PhotoLibrary
@@ -28,6 +34,7 @@ import androidx.core.content.ContextCompat
 import com.scann.thekami.camera.BarcodeAnalyzer
 import com.scann.thekami.model.ScanResult
 import com.scann.thekami.util.GalleryScanner
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -56,7 +63,9 @@ fun ScannerScreen(
     var isFlashOn by remember { mutableStateOf(false) }
     var camera by remember { mutableStateOf<androidx.camera.core.Camera?>(null) }
     var hasScanned by remember { mutableStateOf(false) }
+    var showSuccessFlash by remember { mutableStateOf(false) }
     var isProcessingGalleryImage by remember { mutableStateOf(false) }
+    var galleryScanFailed by remember { mutableStateOf(false) }
     val galleryPickerLauncherTrigger = remember { mutableIntStateOf(0) }
 
     val cameraExecutor: ExecutorService = remember { Executors.newSingleThreadExecutor() }
@@ -67,17 +76,31 @@ fun ScannerScreen(
         hasCameraPermission = granted
     }
 
+    // Fires the success flash, waits briefly so the user sees it, then navigates to the result.
+    fun confirmScan(result: ScanResult) {
+        hasScanned = true
+        showSuccessFlash = true
+        coroutineScope.launch {
+            delay(450)
+            onBarcodeScanned(result)
+        }
+    }
+
     val galleryPickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
     ) { uri ->
         if (uri != null && !hasScanned) {
             isProcessingGalleryImage = true
+            galleryScanFailed = false
             coroutineScope.launch {
                 val result = GalleryScanner.scanImage(context, uri)
                 isProcessingGalleryImage = false
                 if (result != null) {
-                    hasScanned = true
-                    onBarcodeScanned(result)
+                    confirmScan(result)
+                } else {
+                    galleryScanFailed = true
+                    delay(2200)
+                    galleryScanFailed = false
                 }
             }
         }
@@ -140,8 +163,7 @@ fun ScannerScreen(
                             .also {
                                 it.setAnalyzer(cameraExecutor, BarcodeAnalyzer { result ->
                                     if (!hasScanned) {
-                                        hasScanned = true
-                                        onBarcodeScanned(result)
+                                        confirmScan(result)
                                     }
                                 })
                             }
@@ -166,13 +188,35 @@ fun ScannerScreen(
                 modifier = Modifier.fillMaxSize()
             )
 
-            // Scan frame overlay — subtle corner brackets for a premium feel
+            // Scan frame overlay — turns green and shows a checkmark on successful scan
             Box(
                 modifier = Modifier
                     .align(Alignment.Center)
                     .size(260.dp)
             ) {
-                ScanFrameCorners()
+                ScanFrameCorners(success = showSuccessFlash)
+
+                AnimatedVisibility(
+                    visible = showSuccessFlash,
+                    enter = scaleIn() + fadeIn(),
+                    exit = scaleOut() + fadeOut(),
+                    modifier = Modifier.align(Alignment.Center)
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = Color(0xFF4CAF50),
+                        modifier = Modifier.size(64.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Filled.CheckCircle,
+                                contentDescription = "Scan successful",
+                                tint = Color.White,
+                                modifier = Modifier.size(40.dp)
+                            )
+                        }
+                    }
+                }
             }
 
             // Top label
@@ -189,6 +233,30 @@ fun ScannerScreen(
                     style = MaterialTheme.typography.titleLarge,
                     color = Color.White
                 )
+            }
+
+            // Gallery scan failure message
+            AnimatedVisibility(
+                visible = galleryScanFailed,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .statusBarsPadding()
+                    .padding(top = 72.dp)
+            ) {
+                Surface(
+                    shape = MaterialTheme.shapes.medium,
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    modifier = Modifier.padding(horizontal = 24.dp)
+                ) {
+                    Text(
+                        text = "No QR code or barcode found in this image",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                    )
+                }
             }
 
             // Bottom-left: Gallery, Bottom-right: Flash — positioned above the nav bar
@@ -279,8 +347,8 @@ private fun CircleIconButton(
 }
 
 @Composable
-private fun ScanFrameCorners() {
-    val cornerColor = Color.White.copy(alpha = 0.9f)
+private fun ScanFrameCorners(success: Boolean = false) {
+    val cornerColor = if (success) Color(0xFF4CAF50) else Color.White.copy(alpha = 0.9f)
     val strokeWidth = 4.dp
     val cornerLength = 32.dp
 

@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Scann</string>
+    <string name="shortcut_scan_short">Scan</string>
+    <string name="shortcut_scan_long">Scan QR / Barcode</string>
+    <string name="shortcut_create_short">Create</string>
+    <string name="shortcut_create_long">Create QR Code</string>
 </resources>
