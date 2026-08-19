@@ -16,7 +16,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.scann.thekami.BuildConfig
-import com.scann.thekami.ads.NativeAdCard
+import com.scann.thekami.ads.BannerAdCard
+import coil.compose.AsyncImage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -105,16 +106,25 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            NativeAdCard(modifier = Modifier.fillMaxWidth())
+            BannerAdCard(modifier = Modifier.fillMaxWidth())
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            Text(
-                text = "Made with care by TheKami",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(bottom = 24.dp)
-            )
+            ) {
+                Text(
+                    text = "Made by ",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                AsyncImage(
+                    model = "https://www.thekami.tech/logo.png",
+                    contentDescription = "TheKami",
+                    modifier = Modifier.height(16.dp)
+                )
+            }
         }
     }
 }
