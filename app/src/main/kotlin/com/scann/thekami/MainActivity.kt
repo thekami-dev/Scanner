@@ -12,6 +12,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import com.scann.thekami.model.ScanAction
 import com.scann.thekami.model.ScanResult
 import com.scann.thekami.ui.components.FloatingBottomNav
