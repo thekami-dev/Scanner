@@ -135,7 +135,7 @@ fun ScannerScreen(
 
                         val imageAnalysis = ImageAnalysis.Builder()
                             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                            .setTargetResolution(android.util.Size(960, 540))
+                            .setTargetResolution(android.util.Size(1280, 720))
                             .build()
                             .also {
                                 it.setAnalyzer(cameraExecutor, BarcodeAnalyzer { result ->
