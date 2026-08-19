@@ -10,9 +10,8 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.PhotoLibrary
@@ -35,8 +34,7 @@ import java.util.concurrent.Executors
 
 @Composable
 fun ScannerScreen(
-    onBarcodeScanned: (ScanResult) -> Unit,
-    onBack: () -> Unit
+    onBarcodeScanned: (ScanResult) -> Unit
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -137,6 +135,7 @@ fun ScannerScreen(
 
                         val imageAnalysis = ImageAnalysis.Builder()
                             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                            .setTargetResolution(android.util.Size(1280, 720))
                             .build()
                             .also {
                                 it.setAnalyzer(cameraExecutor, BarcodeAnalyzer { result ->
@@ -167,64 +166,59 @@ fun ScannerScreen(
                 modifier = Modifier.fillMaxSize()
             )
 
-            // Top bar
-            Row(
+            // Scan frame overlay — subtle corner brackets for a premium feel
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .size(260.dp)
+            ) {
+                ScanFrameCorners()
+            }
+
+            // Top label
+            Box(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .fillMaxWidth()
                     .statusBarsPadding()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(top = 20.dp),
+                contentAlignment = Alignment.Center
             ) {
-                IconButton(
-                    onClick = onBack,
-                    modifier = Modifier
-                        .background(Color.Black.copy(alpha = 0.4f), RoundedCornerShape(50))
-                ) {
-                    Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
-                }
+                Text(
+                    text = "Scann",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = Color.White
+                )
+            }
 
-                IconButton(
+            // Bottom-left: Gallery, Bottom-right: Flash — positioned above the nav bar
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 24.dp, bottom = 140.dp)
+            ) {
+                CircleIconButton(
+                    icon = Icons.Filled.PhotoLibrary,
+                    contentDescription = "Scan from gallery",
+                    loading = isProcessingGalleryImage,
+                    onClick = { onGalleryClick() }
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 24.dp, bottom = 140.dp)
+            ) {
+                CircleIconButton(
+                    icon = if (isFlashOn) Icons.Filled.FlashOn else Icons.Filled.FlashOff,
+                    contentDescription = "Toggle flash",
+                    active = isFlashOn,
                     onClick = {
                         isFlashOn = !isFlashOn
                         camera?.cameraControl?.enableTorch(isFlashOn)
-                    },
-                    modifier = Modifier
-                        .background(Color.Black.copy(alpha = 0.4f), RoundedCornerShape(50))
-                ) {
-                    Icon(
-                        imageVector = if (isFlashOn) Icons.Filled.FlashOn else Icons.Filled.FlashOff,
-                        contentDescription = "Toggle Flash",
-                        tint = Color.White
-                    )
-                }
-            }
-
-            // Bottom bar — gallery button
-            Row(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .padding(24.dp),
-                horizontalArrangement = Arrangement.Center
-            ) {
-                FilledTonalButton(
-                    onClick = { onGalleryClick() },
-                    enabled = !isProcessingGalleryImage,
-                    modifier = Modifier.height(52.dp)
-                ) {
-                    if (isProcessingGalleryImage) {
-                        CircularProgressIndicator(modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Scanning...")
-                    } else {
-                        Icon(Icons.Filled.PhotoLibrary, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Scan from Gallery")
                     }
-                }
+                )
             }
         } else {
             Column(
@@ -245,5 +239,103 @@ fun ScannerScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun CircleIconButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    loading: Boolean = false,
+    active: Boolean = false,
+    onClick: () -> Unit
+) {
+    val bgColor = if (active) Color.White else Color.Black.copy(alpha = 0.45f)
+    val tintColor = if (active) Color.Black else Color.White
+
+    Surface(
+        onClick = onClick,
+        shape = CircleShape,
+        color = bgColor,
+        modifier = Modifier.size(56.dp)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            if (loading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    color = tintColor,
+                    strokeWidth = 2.dp
+                )
+            } else {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = contentDescription,
+                    tint = tintColor,
+                    modifier = Modifier.size(26.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ScanFrameCorners() {
+    val cornerColor = Color.White.copy(alpha = 0.9f)
+    val strokeWidth = 4.dp
+    val cornerLength = 32.dp
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Top-left
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .size(width = cornerLength, height = strokeWidth)
+                .background(cornerColor)
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .size(width = strokeWidth, height = cornerLength)
+                .background(cornerColor)
+        )
+        // Top-right
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .size(width = cornerLength, height = strokeWidth)
+                .background(cornerColor)
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .size(width = strokeWidth, height = cornerLength)
+                .background(cornerColor)
+        )
+        // Bottom-left
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .size(width = cornerLength, height = strokeWidth)
+                .background(cornerColor)
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .size(width = strokeWidth, height = cornerLength)
+                .background(cornerColor)
+        )
+        // Bottom-right
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .size(width = cornerLength, height = strokeWidth)
+                .background(cornerColor)
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .size(width = strokeWidth, height = cornerLength)
+                .background(cornerColor)
+        )
     }
 }

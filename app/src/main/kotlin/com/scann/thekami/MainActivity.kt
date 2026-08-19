@@ -5,20 +5,19 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.*
+import androidx.compose.runtime.*
 import androidx.compose.material3.Surface
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import com.scann.thekami.model.ScanAction
 import com.scann.thekami.model.ScanResult
+import com.scann.thekami.ui.components.FloatingBottomNav
+import com.scann.thekami.ui.components.NavTab
 import com.scann.thekami.ui.screens.AboutScreen
 import com.scann.thekami.ui.screens.GeneratorScreen
-import com.scann.thekami.ui.screens.HomeScreen
 import com.scann.thekami.ui.screens.ResultScreen
 import com.scann.thekami.ui.screens.ScannerScreen
 import com.scann.thekami.ui.screens.SettingsScreen
@@ -35,69 +34,73 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private sealed class Screen {
-    object Home : Screen()
-    object Scanner : Screen()
-    object Generator : Screen()
-    object Settings : Screen()
-    object About : Screen()
-    data class Result(val scanResult: ScanResult) : Screen()
+private sealed class Overlay {
+    object None : Overlay()
+    object About : Overlay()
+    data class Result(val scanResult: ScanResult) : Overlay()
 }
 
 @Composable
 fun ScannApp() {
     val context = LocalContext.current
-    var currentScreen by remember { mutableStateOf<Screen>(Screen.Home) }
+    var selectedTab by remember { mutableStateOf(NavTab.SCAN) }
+    var overlay by remember { mutableStateOf<Overlay>(Overlay.None) }
 
     ScannTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
-            BackHandler(enabled = currentScreen !is Screen.Home) {
-                currentScreen = when (currentScreen) {
-                    is Screen.About -> Screen.Settings
-                    else -> Screen.Home
-                }
+            BackHandler(enabled = overlay !is Overlay.None) {
+                overlay = if (overlay is Overlay.About) Overlay.None else Overlay.None
             }
 
-            when (val screen = currentScreen) {
-                is Screen.Home -> {
-                    HomeScreen(
-                        onScanClick = { currentScreen = Screen.Scanner },
-                        onGenerateClick = { currentScreen = Screen.Generator },
-                        onSettingsClick = { currentScreen = Screen.Settings }
+            Box(modifier = Modifier.fillMaxSize()) {
+                // Base tab content
+                when (selectedTab) {
+                    NavTab.SCAN -> {
+                        ScannerScreen(
+                            onBarcodeScanned = { result ->
+                                overlay = Overlay.Result(result)
+                            }
+                        )
+                    }
+                    NavTab.CREATE -> {
+                        GeneratorScreen()
+                    }
+                    NavTab.SETTINGS -> {
+                        SettingsScreen(
+                            onAboutClick = { overlay = Overlay.About }
+                        )
+                    }
+                }
+
+                // Floating bottom nav — hidden while an overlay (Result/About) is showing
+                if (overlay is Overlay.None) {
+                    FloatingBottomNav(
+                        selectedTab = selectedTab,
+                        onTabSelected = { selectedTab = it },
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(horizontal = 32.dp, vertical = 24.dp)
+                            .navigationBarsPadding()
                     )
                 }
-                is Screen.Scanner -> {
-                    ScannerScreen(
-                        onBarcodeScanned = { result ->
-                            currentScreen = Screen.Result(result)
-                        },
-                        onBack = { currentScreen = Screen.Home }
-                    )
-                }
-                is Screen.Generator -> {
-                    GeneratorScreen(
-                        onBack = { currentScreen = Screen.Home }
-                    )
-                }
-                is Screen.Settings -> {
-                    SettingsScreen(
-                        onBack = { currentScreen = Screen.Home },
-                        onAboutClick = { currentScreen = Screen.About }
-                    )
-                }
-                is Screen.About -> {
-                    AboutScreen(
-                        onBack = { currentScreen = Screen.Settings }
-                    )
-                }
-                is Screen.Result -> {
-                    ResultScreen(
-                        scanResult = screen.scanResult,
-                        onBack = { currentScreen = Screen.Home },
-                        onAction = { action: ScanAction ->
-                            ScanActionHandler.handle(context, action)
-                        }
-                    )
+
+                // Overlays
+                when (val current = overlay) {
+                    is Overlay.Result -> {
+                        ResultScreen(
+                            scanResult = current.scanResult,
+                            onBack = { overlay = Overlay.None },
+                            onAction = { action: ScanAction ->
+                                ScanActionHandler.handle(context, action)
+                            }
+                        )
+                    }
+                    is Overlay.About -> {
+                        AboutScreen(
+                            onBack = { overlay = Overlay.None }
+                        )
+                    }
+                    is Overlay.None -> {}
                 }
             }
         }
