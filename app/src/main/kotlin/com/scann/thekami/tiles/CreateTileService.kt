@@ -22,7 +22,7 @@ class CreateTileService : TileService() {
                 )
             )
         } else {
-            @Suppress("DEPRECATION")
+            @Suppress("DEPRECATION", "StartActivityAndCollapseDeprecated")
             startActivityAndCollapse(intent)
         }
     }
