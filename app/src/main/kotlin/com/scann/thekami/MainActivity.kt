@@ -89,11 +89,13 @@ fun ScannApp(
             Box(modifier = Modifier.fillMaxSize()) {
                 when (selectedTab) {
                     NavTab.SCAN -> {
-                        ScannerScreen(
-                            onBarcodeScanned = { result ->
-                                overlay = Overlay.Result(result)
-                            }
-                        )
+                        key(overlay is Overlay.None) {
+                            ScannerScreen(
+                                onBarcodeScanned = { result ->
+                                    overlay = Overlay.Result(result)
+                                }
+                            )
+                        }
                     }
                     NavTab.CREATE -> {
                         GeneratorScreen()
