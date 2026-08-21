@@ -219,6 +219,14 @@ private fun SettingsRow(
 }
 
 @Composable
+private fun SettingsDivider() {
+    HorizontalDivider(
+        modifier = Modifier.padding(horizontal = 16.dp),
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+    )
+}
+
+@Composable
 private fun SettingsRowIcon(
     iconRes: Int,
     title: String,
