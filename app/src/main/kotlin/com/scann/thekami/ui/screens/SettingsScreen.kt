@@ -4,7 +4,10 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Info
@@ -16,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.scann.thekami.BuildConfig
@@ -46,6 +50,7 @@ fun SettingsScreen(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp)
         ) {
             Spacer(modifier = Modifier.height(8.dp))
@@ -70,55 +75,25 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(20.dp))
 
             SectionLabel("Follow Us")
-            SettingsCard {
-                SettingsRowIcon(
-                    iconRes = R.drawable.ic_globe,
-                    title = "Website",
-                    subtitle = "thekami.tech",
-                    onClick = { openUrl("https://www.thekami.tech/") }
-                )
-                SettingsDivider()
-                SettingsRowIcon(
-                    iconRes = R.drawable.ic_blog,
-                    title = "Blog",
-                    subtitle = "Read about Scann's development",
-                    onClick = { openUrl("https://blog.thekami.tech/posts/scann/") }
-                )
-                SettingsDivider()
-                SettingsRowIcon(
-                    iconRes = R.drawable.ic_instagram,
-                    title = "Instagram",
-                    subtitle = "@thekami_official",
-                    onClick = { openUrl("https://www.instagram.com/thekami_official") }
-                )
-                SettingsDivider()
-                SettingsRowIcon(
-                    iconRes = R.drawable.ic_x,
-                    title = "X (Twitter)",
-                    subtitle = "@thekamiofficial",
-                    onClick = { openUrl("https://x.com/thekamiofficial") }
-                )
-                SettingsDivider()
-                SettingsRowIcon(
-                    iconRes = R.drawable.ic_linkedin,
-                    title = "LinkedIn",
-                    subtitle = "TheKami",
-                    onClick = { openUrl("https://www.linkedin.com/company/thekamiofficial") }
-                )
-                SettingsDivider()
-                SettingsRowIcon(
-                    iconRes = R.drawable.ic_discord,
-                    title = "Discord Community",
-                    subtitle = "Join for support and updates",
-                    onClick = { openUrl("https://www.thekami.tech/discord/") }
-                )
-                SettingsDivider()
-                SettingsRowIcon(
-                    iconRes = R.drawable.ic_github,
-                    title = "GitHub",
-                    subtitle = "github.com/thekami-dev",
-                    onClick = { openUrl("https://github.com/thekami-dev") }
-                )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                SocialIconButton(R.drawable.ic_instagram) {
+                    openUrl("https://www.instagram.com/thekami_official")
+                }
+                SocialIconButton(R.drawable.ic_x) {
+                    openUrl("https://x.com/thekamiofficial")
+                }
+                SocialIconButton(R.drawable.ic_linkedin) {
+                    openUrl("https://www.linkedin.com/company/thekamiofficial")
+                }
+                SocialIconButton(R.drawable.ic_discord) {
+                    openUrl("https://www.thekami.tech/discord/")
+                }
+                SocialIconButton(R.drawable.ic_github) {
+                    openUrl("https://github.com/thekami-dev")
+                }
             }
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -227,38 +202,20 @@ private fun SettingsDivider() {
 }
 
 @Composable
-private fun SettingsRowIcon(
-    iconRes: Int,
-    title: String,
-    subtitle: String,
-    onClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
+private fun SocialIconButton(iconRes: Int, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+        modifier = Modifier.size(52.dp)
     ) {
-        Icon(
-            painter = androidx.compose.ui.res.painterResource(id = iconRes),
-            contentDescription = null,
-            tint = Color.Unspecified,
-            modifier = Modifier.size(24.dp)
-        )
-        Spacer(modifier = Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, style = MaterialTheme.typography.bodyLarge)
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                painter = painterResource(id = iconRes),
+                contentDescription = null,
+                tint = Color.Unspecified,
+                modifier = Modifier.size(24.dp)
             )
         }
-        Icon(
-            imageVector = Icons.Filled.ChevronRight,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
-        )
     }
 }
