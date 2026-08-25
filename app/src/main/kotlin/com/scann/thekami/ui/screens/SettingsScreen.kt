@@ -2,22 +2,29 @@ package com.scann.thekami.ui.screens
 
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import com.scann.thekami.BuildConfig
-import com.scann.thekami.ads.BannerAdCard
 import coil.compose.AsyncImage
+import com.scann.thekami.BuildConfig
+import com.scann.thekami.R
+import com.scann.thekami.ads.BannerAdCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,15 +43,14 @@ fun SettingsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Settings") }
-            )
+            TopAppBar(title = { Text("Settings") })
         }
     ) { padding ->
         Column(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp)
         ) {
             Spacer(modifier = Modifier.height(8.dp))
@@ -54,53 +60,53 @@ fun SettingsScreen(
                 SettingsRow(
                     icon = Icons.Filled.Info,
                     title = "About Scann",
-                    subtitle = "Version ${BuildConfig.VERSION_NAME} · Features & privacy",
+                    subtitle = "Version ${BuildConfig.VERSION_NAME}",
                     onClick = onAboutClick
                 )
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            SectionLabel("Connect")
-            SettingsCard {
-                SettingsRow(
-                    icon = Icons.Filled.Language,
-                    title = "Website",
-                    subtitle = "thekami.tech",
-                    onClick = { openUrl("https://www.thekami.tech/") }
-                )
                 SettingsDivider()
                 SettingsRow(
-                    icon = Icons.Filled.Article,
-                    title = "Blog",
-                    subtitle = "Read about Scann's development",
+                    icon = Icons.Filled.PrivacyTip,
+                    title = "Privacy Policy",
+                    subtitle = "How we handle your data",
                     onClick = { openUrl("https://blog.thekami.tech/posts/scann/") }
                 )
-                SettingsDivider()
-                SettingsRow(
-                    icon = Icons.Filled.Forum,
-                    title = "Discord Community",
-                    subtitle = "Join for support and updates",
-                    onClick = { openUrl("https://www.thekami.tech/discord/") }
-                )
-                SettingsDivider()
-                SettingsRow(
-                    icon = Icons.Filled.Code,
-                    title = "GitHub",
-                    subtitle = "github.com/thekami-dev",
-                    onClick = { openUrl("https://github.com/thekami-dev") }
-                )
             }
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            SectionLabel("More apps by TheKami")
+            SectionLabel("Follow Us")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                SocialIconButton(R.drawable.ic_instagram) {
+                    openUrl("https://www.instagram.com/thekami_official")
+                }
+                SocialIconButton(R.drawable.ic_x) {
+                    openUrl("https://x.com/thekamiofficial")
+                }
+                SocialIconButton(R.drawable.ic_linkedin) {
+                    openUrl("https://www.linkedin.com/company/thekamiofficial")
+                }
+                SocialIconButton(R.drawable.ic_discord) {
+                    openUrl("https://www.thekami.tech/discord/")
+                }
+                SocialIconButton(R.drawable.ic_github) {
+                    openUrl("https://github.com/thekami-dev")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            SectionLabel("More from TheKami")
             SettingsCard {
                 SettingsRow(
-                    icon = Icons.Filled.Apps,
-                    title = "Explore our other apps",
-                    subtitle = "Flow Browser, Aurora Gallery, KamiAuth",
-                    onClick = { openUrl("https://www.thekami.tech/") }
+                    icon = null,
+                    title = "More apps by TheKami",
+                    subtitle = "Explore our other apps on Play Store",
+                    onClick = {
+                        openUrl("https://play.google.com/store/apps/dev?id=8580703469843686933")
+                    }
                 )
             }
 
@@ -151,24 +157,26 @@ private fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
 
 @Composable
 private fun SettingsRow(
-    icon: ImageVector,
+    icon: ImageVector?,
     title: String,
     subtitle: String,
-    onClick: (() -> Unit)?
+    onClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
+            .clickable { onClick() }
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary
-        )
-        Spacer(modifier = Modifier.width(16.dp))
+        if (icon != null) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+        }
         Column(modifier = Modifier.weight(1f)) {
             Text(text = title, style = MaterialTheme.typography.bodyLarge)
             Text(
@@ -177,13 +185,11 @@ private fun SettingsRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        if (onClick != null) {
-            Icon(
-                imageVector = Icons.Filled.ChevronRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+        Icon(
+            imageVector = Icons.Filled.ChevronRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -193,4 +199,23 @@ private fun SettingsDivider() {
         modifier = Modifier.padding(horizontal = 16.dp),
         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
     )
+}
+
+@Composable
+private fun SocialIconButton(iconRes: Int, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+        modifier = Modifier.size(52.dp)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                painter = painterResource(id = iconRes),
+                contentDescription = null,
+                tint = Color.Unspecified,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+    }
 }
