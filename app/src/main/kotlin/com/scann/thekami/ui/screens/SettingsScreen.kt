@@ -5,6 +5,7 @@ import android.net.Uri
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -21,11 +22,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.google.android.play.core.review.ReviewManagerFactory
 import com.scann.thekami.BuildConfig
@@ -33,6 +38,11 @@ import com.scann.thekami.R
 import com.scann.thekami.ads.BannerAdCard
 import com.scann.thekami.util.NotificationController
 import androidx.core.content.ContextCompat
+
+// Nested-radius system, shared shape language with other screens
+private val CardRowPadding = 16.dp
+private val CardInnerRadius = 12.dp
+private val CardRadius = CardInnerRadius + 4.dp // 16.dp — cards are the outermost element here, no inner shape to nest against, so this stays a fixed constant rather than +padding
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -88,7 +98,7 @@ fun SettingsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Settings") })
+            TopAppBar(title = { Text("Settings", fontWeight = FontWeight.SemiBold) })
         }
     ) { padding ->
         Column(
@@ -97,8 +107,9 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp)
+                .padding(bottom = 140.dp)
         ) {
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
             SectionLabel("Quick access")
             SettingsCard {
@@ -119,6 +130,8 @@ fun SettingsScreen(
                     }
                 )
             }
+
+            Spacer(modifier = Modifier.height(24.dp))
 
             SectionLabel("About")
             SettingsCard {
@@ -144,19 +157,13 @@ fun SettingsScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            SectionLabel("Follow Us")
+            SectionLabel("Follow us")
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally)
             ) {
-                SocialIconButton(R.drawable.ic_instagram) {
-                    openUrl("https://www.instagram.com/thekami_official")
-                }
-                SocialIconButton(R.drawable.ic_x) {
-                    openUrl("https://x.com/thekamiofficial")
-                }
                 SocialIconButton(R.drawable.ic_linkedin) {
                     openUrl("https://www.linkedin.com/company/thekamiofficial")
                 }
@@ -168,7 +175,7 @@ fun SettingsScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             SectionLabel("More from TheKami")
             SettingsCard {
@@ -182,29 +189,32 @@ fun SettingsScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             BannerAdCard(modifier = Modifier.fillMaxWidth())
+
+            Spacer(modifier = Modifier.height(28.dp))
 
             Spacer(modifier = Modifier.height(20.dp))
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(bottom = 24.dp)
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 24.dp)
+                    .clickable { openUrl("https://www.thekami.tech") }
             ) {
                 Text(
-                    text = "Made by ",
-                    style = MaterialTheme.typography.bodySmall,
+                    text = "Made by",
+                    style = MaterialTheme.typography.bodySmall.copy(fontStyle = FontStyle.Italic),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                Spacer(modifier = Modifier.width(6.dp))
                 AsyncImage(
                     model = "https://www.thekami.tech/logo.png",
                     contentDescription = "TheKami",
-                    modifier = Modifier
-                        .height(16.dp)
-                        .clickable {
-                            openUrl("https://www.thekami.tech")
-                        }
+                    modifier = Modifier.height(15.dp)
                 )
             }
         }
@@ -214,16 +224,20 @@ fun SettingsScreen(
 @Composable
 private fun SectionLabel(text: String) {
     Text(
-        text = text,
-        style = MaterialTheme.typography.titleMedium,
-        modifier = Modifier.padding(vertical = 8.dp)
+        text = text.uppercase(),
+        style = MaterialTheme.typography.labelMedium.copy(
+            letterSpacing = 0.8.sp,
+            fontWeight = FontWeight.SemiBold
+        ),
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
     )
 }
 
 @Composable
 private fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
     Surface(
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(CardRadius),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -242,16 +256,25 @@ private fun SettingsRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
-            .padding(16.dp),
+            .padding(CardRowPadding),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (icon != null) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.width(16.dp))
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                modifier = Modifier.size(38.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(14.dp))
         }
         Column(modifier = Modifier.weight(1f)) {
             Text(text = title, style = MaterialTheme.typography.bodyLarge)
@@ -264,7 +287,8 @@ private fun SettingsRow(
         Icon(
             imageVector = Icons.Filled.ChevronRight,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+            modifier = Modifier.size(20.dp)
         )
     }
 }
@@ -272,7 +296,7 @@ private fun SettingsRow(
 @Composable
 private fun SettingsDivider() {
     HorizontalDivider(
-        modifier = Modifier.padding(horizontal = 16.dp),
+        modifier = Modifier.padding(horizontal = CardRowPadding),
         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
     )
 }
@@ -285,23 +309,33 @@ private fun NotificationSettingRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
+            .padding(CardRowPadding),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            imageVector = Icons.Filled.NotificationsActive,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary
-        )
-        Spacer(modifier = Modifier.width(16.dp))
+        Surface(
+            shape = RoundedCornerShape(10.dp),
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+            modifier = Modifier.size(38.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = Icons.Filled.NotificationsActive,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+        Spacer(modifier = Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text("Create QR shortcut", style = MaterialTheme.typography.bodyLarge)
             Text(
-                "Show Create QR code in your notifications",
+                "Adds a quick shortcut to create a QR code from your notifications",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+        Spacer(modifier = Modifier.width(8.dp))
         Switch(checked = enabled, onCheckedChange = onCheckedChange)
     }
 }
@@ -311,7 +345,7 @@ private fun SocialIconButton(iconRes: Int, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
         shape = CircleShape,
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
         modifier = Modifier.size(52.dp)
     ) {
         Box(contentAlignment = Alignment.Center) {
@@ -319,7 +353,7 @@ private fun SocialIconButton(iconRes: Int, onClick: () -> Unit) {
                 painter = painterResource(id = iconRes),
                 contentDescription = null,
                 tint = Color.Unspecified,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(22.dp)
             )
         }
     }

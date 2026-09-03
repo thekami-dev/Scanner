@@ -16,6 +16,13 @@ import com.scann.thekami.model.ScanResultType
 import com.scann.thekami.ads.BannerAdCard
 import com.scann.thekami.model.ScanAction
 
+// Shared with QrResultScreen — keep these two in sync, or better,
+// move to a single Radii object (see note at bottom).
+private val CardContentPadding = 16.dp
+private val CardInnerRadius = 12.dp
+private val CardRadius = CardInnerRadius + CardContentPadding // 28.dp
+private val ActionButtonRadius = 18.dp
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ResultScreen(
@@ -29,7 +36,11 @@ fun ResultScreen(
                 title = { Text("Scan Result") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            Icons.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
                 }
             )
@@ -48,9 +59,9 @@ fun ResultScreen(
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(CardRadius)
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(CardContentPadding)) {
                     ResultContent(scanResult.type)
                 }
             }
@@ -131,13 +142,13 @@ private fun ResultContent(type: ScanResultType) {
 
 @Composable
 private fun ResultActions(scanResult: ScanResult, onAction: (ScanAction) -> Unit) {
-    Column {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         when (val type = scanResult.type) {
             is ScanResultType.Url -> {
                 ActionButton("Open Link", Icons.Filled.OpenInBrowser) {
                     onAction(ScanAction.OpenUrl(type.value))
                 }
-                ActionButton("Copy Link", Icons.Filled.ContentCopy) {
+                ActionButton("Copy Link", Icons.Filled.ContentCopy, filled = false) {
                     onAction(ScanAction.CopyText(type.value))
                 }
             }
@@ -145,7 +156,7 @@ private fun ResultActions(scanResult: ScanResult, onAction: (ScanAction) -> Unit
                 ActionButton("Copy Text", Icons.Filled.ContentCopy) {
                     onAction(ScanAction.CopyText(type.value))
                 }
-                ActionButton("Share", Icons.Filled.Share) {
+                ActionButton("Share", Icons.Filled.Share, filled = false) {
                     onAction(ScanAction.ShareText(type.value))
                 }
             }
@@ -153,7 +164,7 @@ private fun ResultActions(scanResult: ScanResult, onAction: (ScanAction) -> Unit
                 ActionButton("Call", Icons.Filled.Call) {
                     onAction(ScanAction.CallPhone(type.value))
                 }
-                ActionButton("Copy Number", Icons.Filled.ContentCopy) {
+                ActionButton("Copy Number", Icons.Filled.ContentCopy, filled = false) {
                     onAction(ScanAction.CopyText(type.value))
                 }
             }
@@ -161,7 +172,7 @@ private fun ResultActions(scanResult: ScanResult, onAction: (ScanAction) -> Unit
                 ActionButton("Send Email", Icons.Filled.Email) {
                     onAction(ScanAction.SendEmail(type.address, type.subject, type.body))
                 }
-                ActionButton("Copy Email", Icons.Filled.ContentCopy) {
+                ActionButton("Copy Email", Icons.Filled.ContentCopy, filled = false) {
                     onAction(ScanAction.CopyText(type.address))
                 }
             }
@@ -180,7 +191,7 @@ private fun ResultActions(scanResult: ScanResult, onAction: (ScanAction) -> Unit
                     onAction(ScanAction.ConnectWifi(type.ssid, type.password, type.encryptionType))
                 }
                 type.password?.let {
-                    ActionButton("Copy Password", Icons.Filled.ContentCopy) {
+                    ActionButton("Copy Password", Icons.Filled.ContentCopy, filled = false) {
                         onAction(ScanAction.CopyText(it))
                     }
                 }
@@ -210,15 +221,38 @@ private fun ResultActions(scanResult: ScanResult, onAction: (ScanAction) -> Unit
 }
 
 @Composable
-private fun ActionButton(text: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
-    Button(
-        onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp)
-    ) {
-        Icon(icon, contentDescription = null)
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(text)
+private fun ActionButton(
+    text: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    filled: Boolean = true,
+    onClick: () -> Unit
+) {
+    val shape = RoundedCornerShape(ActionButtonRadius)
+    val iconModifier = Modifier.height(20.dp)
+
+    if (filled) {
+        Button(
+            onClick = onClick,
+            shape = shape,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp)
+        ) {
+            Icon(icon, contentDescription = null, modifier = iconModifier)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text)
+        }
+    } else {
+        OutlinedButton(
+            onClick = onClick,
+            shape = shape,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp)
+        ) {
+            Icon(icon, contentDescription = null, modifier = iconModifier)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text)
+        }
     }
 }

@@ -277,7 +277,11 @@ fun GeneratorScreen() {
                         .fillMaxWidth()
                         .height(52.dp)
                 ) {
-                    Icon(Icons.Filled.QrCode2, contentDescription = null)
+                    Icon(
+                        Icons.Filled.QrCode2,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Generate QR Code")
                 }

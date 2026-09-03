@@ -241,7 +241,7 @@ fun ScannerScreen(
                             imageVector = Icons.Filled.QrCodeScanner,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(22.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
@@ -343,7 +343,7 @@ private fun CircleIconButton(
     } else {
         colorScheme.surface.copy(alpha = 0.86f)
     }
-    val tintColor = if (active) colorScheme.onPrimaryContainer else colorScheme.onSurface
+    val tintColor = if (active) colorScheme.onPrimaryContainer else colorScheme.onSurfaceVariant
 
     Surface(
         onClick = onClick,
@@ -367,7 +367,7 @@ private fun CircleIconButton(
                     imageVector = icon,
                     contentDescription = contentDescription,
                     tint = tintColor,
-                    modifier = Modifier.size(26.dp)
+                    modifier = Modifier.size(24.dp)
                 )
             }
         }
