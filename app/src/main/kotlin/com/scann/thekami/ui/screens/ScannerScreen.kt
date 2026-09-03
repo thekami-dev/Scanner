@@ -62,12 +62,6 @@ fun ScannerScreen(
     val coroutineScope = rememberCoroutineScope()
     val isActiveState by rememberUpdatedState(isActive)
 
-    val galleryPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        Manifest.permission.READ_MEDIA_IMAGES
-    } else {
-        Manifest.permission.READ_EXTERNAL_STORAGE
-    }
-
     var hasCameraPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
@@ -81,7 +75,6 @@ fun ScannerScreen(
     var showSuccessFlash by remember { mutableStateOf(false) }
     var isProcessingGalleryImage by remember { mutableStateOf(false) }
     var galleryScanFailed by remember { mutableStateOf(false) }
-    val galleryPickerLauncherTrigger = remember { mutableIntStateOf(0) }
 
     val cameraExecutor: ExecutorService = remember { Executors.newSingleThreadExecutor() }
 
@@ -102,7 +95,7 @@ fun ScannerScreen(
     }
 
     val galleryPickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-        contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
+        contract = androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()
     ) { uri ->
         if (uri != null && !hasScanned) {
             isProcessingGalleryImage = true
@@ -121,20 +114,6 @@ fun ScannerScreen(
         }
     }
 
-    val galleryPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-        contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) {
-            galleryPickerLauncherTrigger.intValue += 1
-        }
-    }
-
-    LaunchedEffect(galleryPickerLauncherTrigger.intValue) {
-        if (galleryPickerLauncherTrigger.intValue > 0) {
-            galleryPickerLauncher.launch("image/*")
-        }
-    }
-
     LaunchedEffect(Unit) {
         if (!hasCameraPermission) {
             cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
@@ -148,13 +127,11 @@ fun ScannerScreen(
     }
 
     fun onGalleryClick() {
-        val granted = ContextCompat.checkSelfPermission(context, galleryPermission) ==
-            PackageManager.PERMISSION_GRANTED
-        if (granted) {
-            galleryPickerLauncher.launch("image/*")
-        } else {
-            galleryPermissionLauncher.launch(galleryPermission)
-        }
+        galleryPickerLauncher.launch(
+            androidx.activity.result.PickVisualMediaRequest(
+                androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly
+            )
+        )
     }
 
     Box(modifier = modifier) {
@@ -218,7 +195,7 @@ fun ScannerScreen(
                     modifier = Modifier.align(Alignment.Center)
                 ) {
                     Surface(
-shape = RoundedCornerShape(ScanSuccessRadius),
+                        shape = RoundedCornerShape(ScanSuccessRadius),
                         color = MaterialTheme.colorScheme.tertiary,
                         modifier = Modifier.size(64.dp)
                     ) {
