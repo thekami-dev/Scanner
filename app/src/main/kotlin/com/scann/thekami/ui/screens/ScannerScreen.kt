@@ -73,6 +73,14 @@ fun ScannerScreen(
     var camera by remember { mutableStateOf<androidx.camera.core.Camera?>(null) }
     var hasScanned by remember { mutableStateOf(false) }
     var showSuccessFlash by remember { mutableStateOf(false) }
+
+    // Reset scan state whenever this screen becomes active again (e.g. user backs out of the result screen)
+    LaunchedEffect(isActive) {
+        if (isActive) {
+            hasScanned = false
+            showSuccessFlash = false
+        }
+    }
     var isProcessingGalleryImage by remember { mutableStateOf(false) }
     var galleryScanFailed by remember { mutableStateOf(false) }
 
