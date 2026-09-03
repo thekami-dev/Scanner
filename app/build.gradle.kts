@@ -120,6 +120,7 @@ dependencies {
     implementation("com.google.android.gms:play-services-ads:23.6.0")
     implementation("androidx.cardview:cardview:1.0.0")
     implementation("com.google.zxing:core:3.5.3")
+    implementation("com.google.android.play:review-ktx:2.0.2")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")

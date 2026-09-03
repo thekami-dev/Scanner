@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.PrivacyTip
+import androidx.compose.material.icons.filled.StarRate
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,6 +27,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.google.android.play.core.review.ReviewManagerFactory
 import com.scann.thekami.BuildConfig
 import com.scann.thekami.R
 import com.scann.thekami.ads.BannerAdCard
@@ -55,6 +57,32 @@ fun SettingsScreen(
             context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
         } catch (e: Exception) {
             // No browser available
+        }
+    }
+
+    fun openPlayStoreListing() {
+        openUrl("https://play.google.com/store/apps/details?id=${context.packageName}")
+    }
+
+    fun launchInAppReview() {
+        try {
+            val activity = context as? android.app.Activity
+            if (activity == null) {
+                openPlayStoreListing()
+                return
+            }
+            val reviewManager = ReviewManagerFactory.create(context)
+            val request = reviewManager.requestReviewFlow()
+            request.addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    val reviewInfo = task.result
+                    reviewManager.launchReviewFlow(activity, reviewInfo)
+                } else {
+                    openPlayStoreListing()
+                }
+            }
+        } catch (e: Exception) {
+            openPlayStoreListing()
         }
     }
 
@@ -99,6 +127,13 @@ fun SettingsScreen(
                     title = "About Scann",
                     subtitle = "Version ${BuildConfig.VERSION_NAME}",
                     onClick = onAboutClick
+                )
+                SettingsDivider()
+                SettingsRow(
+                    icon = Icons.Filled.StarRate,
+                    title = "Rate Scann",
+                    subtitle = "Enjoying the app? Leave us a rating",
+                    onClick = { launchInAppReview() }
                 )
                 SettingsDivider()
                 SettingsRow(
