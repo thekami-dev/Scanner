@@ -3,6 +3,7 @@ package com.scann.thekami.ui.screens
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
+import android.provider.Settings
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
@@ -16,11 +17,13 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,6 +31,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -39,13 +47,20 @@ import kotlinx.coroutines.launch
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
+private val ScanSuccessPadding = 12.dp
+private val ScanSuccessRadius = ScanSuccessPadding // inner radius is 0, outer radius = padding
+
 @Composable
 fun ScannerScreen(
+    modifier: Modifier = Modifier,
+    isActive: Boolean = true,
     onBarcodeScanned: (ScanResult) -> Unit
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val reducedMotion = rememberReducedMotion()
     val coroutineScope = rememberCoroutineScope()
+    val isActiveState by rememberUpdatedState(isActive)
 
     val galleryPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         Manifest.permission.READ_MEDIA_IMAGES
@@ -81,7 +96,7 @@ fun ScannerScreen(
         hasScanned = true
         showSuccessFlash = true
         coroutineScope.launch {
-            delay(450)
+            delay(if (reducedMotion) 120 else 450)
             onBarcodeScanned(result)
         }
     }
@@ -142,7 +157,7 @@ fun ScannerScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = modifier) {
         if (hasCameraPermission) {
             AndroidView(
                 factory = { ctx ->
@@ -162,7 +177,7 @@ fun ScannerScreen(
                             .build()
                             .also {
                                 it.setAnalyzer(cameraExecutor, BarcodeAnalyzer { result ->
-                                    if (!hasScanned) {
+                                    if (isActiveState && !hasScanned) {
                                         confirmScan(result)
                                     }
                                 })
@@ -198,20 +213,20 @@ fun ScannerScreen(
 
                 AnimatedVisibility(
                     visible = showSuccessFlash,
-                    enter = scaleIn() + fadeIn(),
-                    exit = scaleOut() + fadeOut(),
+                    enter = if (reducedMotion) fadeIn() else scaleIn() + fadeIn(),
+                    exit = if (reducedMotion) fadeOut() else scaleOut() + fadeOut(),
                     modifier = Modifier.align(Alignment.Center)
                 ) {
                     Surface(
-                        shape = CircleShape,
-                        color = Color(0xFF4CAF50),
+shape = RoundedCornerShape(ScanSuccessRadius),
+                        color = MaterialTheme.colorScheme.tertiary,
                         modifier = Modifier.size(64.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = Icons.Filled.CheckCircle,
                                 contentDescription = "Scan successful",
-                                tint = Color.White,
+                                tint = MaterialTheme.colorScheme.onTertiary,
                                 modifier = Modifier.size(40.dp)
                             )
                         }
@@ -219,20 +234,37 @@ fun ScannerScreen(
                 }
             }
 
-            // Top label
             Box(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .fillMaxWidth()
                     .statusBarsPadding()
-                    .padding(top = 20.dp),
+                    .padding(top = 16.dp, start = 20.dp, end = 20.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "Scann",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = Color.White
-                )
+                Surface(
+                    shape = MaterialTheme.shapes.large,
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.86f),
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                    tonalElevation = 3.dp
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.QrCodeScanner,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Point at a QR code",
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
+                }
             }
 
             // Gallery scan failure message
@@ -244,6 +276,9 @@ fun ScannerScreen(
                     .align(Alignment.TopCenter)
                     .statusBarsPadding()
                     .padding(top = 72.dp)
+                    .semantics {
+                        liveRegion = LiveRegionMode.Polite
+                    }
             ) {
                 Surface(
                     shape = MaterialTheme.shapes.medium,
@@ -259,7 +294,6 @@ fun ScannerScreen(
                 }
             }
 
-            // Bottom-left: Gallery, Bottom-right: Flash — positioned above the nav bar
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
@@ -280,7 +314,7 @@ fun ScannerScreen(
             ) {
                 CircleIconButton(
                     icon = if (isFlashOn) Icons.Filled.FlashOn else Icons.Filled.FlashOff,
-                    contentDescription = "Toggle flash",
+                    contentDescription = if (isFlashOn) "Turn flash off" else "Turn flash on",
                     active = isFlashOn,
                     onClick = {
                         isFlashOn = !isFlashOn
@@ -318,14 +352,23 @@ private fun CircleIconButton(
     active: Boolean = false,
     onClick: () -> Unit
 ) {
-    val bgColor = if (active) Color.White else Color.Black.copy(alpha = 0.45f)
-    val tintColor = if (active) Color.Black else Color.White
+    val colorScheme = MaterialTheme.colorScheme
+    val bgColor = if (active) {
+        colorScheme.primaryContainer
+    } else {
+        colorScheme.surface.copy(alpha = 0.86f)
+    }
+    val tintColor = if (active) colorScheme.onPrimaryContainer else colorScheme.onSurface
 
     Surface(
         onClick = onClick,
         shape = CircleShape,
         color = bgColor,
-        modifier = Modifier.size(56.dp)
+        modifier = Modifier
+            .size(56.dp)
+            .semantics {
+                this.contentDescription = contentDescription
+            }
     ) {
         Box(contentAlignment = Alignment.Center) {
             if (loading) {
@@ -347,8 +390,21 @@ private fun CircleIconButton(
 }
 
 @Composable
+private fun rememberReducedMotion(): Boolean {
+    val view = LocalView.current
+    return remember(view) {
+        Settings.Global.getFloat(
+            view.context.contentResolver,
+            Settings.Global.ANIMATOR_DURATION_SCALE,
+            1f
+        ) == 0f
+    }
+}
+
+@Composable
 private fun ScanFrameCorners(success: Boolean = false) {
-    val cornerColor = if (success) Color(0xFF4CAF50) else Color.White.copy(alpha = 0.9f)
+    val colorScheme = MaterialTheme.colorScheme
+    val cornerColor = if (success) colorScheme.tertiary else colorScheme.primaryContainer
     val strokeWidth = 4.dp
     val cornerLength = 32.dp
 

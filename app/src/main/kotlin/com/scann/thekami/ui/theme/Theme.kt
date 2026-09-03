@@ -11,35 +11,46 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-// Warm, soft "creamy" palette — inspired by paper/ink aesthetics
 private val LightColors = lightColorScheme(
-    primary = Color(0xFFB5654A),           // warm terracotta
+    primary = Color(0xFF0061A4),
     onPrimary = Color(0xFFFFFFFF),
-    primaryContainer = Color(0xFFF3DBCF),
-    onPrimaryContainer = Color(0xFF5C2A16),
-    secondary = Color(0xFF8A7A6B),
-    background = Color(0xFFFAF6F0),        // soft cream
-    onBackground = Color(0xFF2B2622),
-    surface = Color(0xFFFFFDF9),
-    onSurface = Color(0xFF2B2622),
-    surfaceVariant = Color(0xFFEDE4D9),
-    onSurfaceVariant = Color(0xFF5C5348),
-    outline = Color(0xFFD8CCBC)
+    primaryContainer = Color(0xFFD1E4FF),
+    onPrimaryContainer = Color(0xFF001D36),
+    secondary = Color(0xFF535F70),
+    onSecondary = Color(0xFFFFFFFF),
+    secondaryContainer = Color(0xFFD7E3F7),
+    onSecondaryContainer = Color(0xFF101C2B),
+    tertiary = Color(0xFF705575),
+    onTertiary = Color(0xFFFFFFFF),
+    background = Color(0xFFF9F9FF),
+    onBackground = Color(0xFF191C20),
+    surface = Color(0xFFF9F9FF),
+    onSurface = Color(0xFF191C20),
+    surfaceVariant = Color(0xFFDDE3EA),
+    onSurfaceVariant = Color(0xFF41474E),
+    outline = Color(0xFF71777F),
+    outlineVariant = Color(0xFFC1C7CF)
 )
 
 private val DarkColors = darkColorScheme(
-    primary = Color(0xFFE0A088),           // soft warm coral
-    onPrimary = Color(0xFF3A1B0F),
-    primaryContainer = Color(0xFF5C2A16),
-    onPrimaryContainer = Color(0xFFF3DBCF),
-    secondary = Color(0xFFB6A793),
-    background = Color(0xFF1C1917),        // warm near-black
-    onBackground = Color(0xFFEDE6DC),
-    surface = Color(0xFF25211D),
-    onSurface = Color(0xFFEDE6DC),
-    surfaceVariant = Color(0xFF352F29),
-    onSurfaceVariant = Color(0xFFCBBEAE),
-    outline = Color(0xFF4A423A)
+    primary = Color(0xFF9ECAFF),
+    onPrimary = Color(0xFF003258),
+    primaryContainer = Color(0xFF00497A),
+    onPrimaryContainer = Color(0xFFD1E4FF),
+    secondary = Color(0xFFBBC7DB),
+    onSecondary = Color(0xFF253140),
+    secondaryContainer = Color(0xFF3B4858),
+    onSecondaryContainer = Color(0xFFD7E3F7),
+    tertiary = Color(0xFFDDBBE0),
+    onTertiary = Color(0xFF3F2844),
+    background = Color(0xFF111418),
+    onBackground = Color(0xFFE1E2E9),
+    surface = Color(0xFF111418),
+    onSurface = Color(0xFFE1E2E9),
+    surfaceVariant = Color(0xFF41474E),
+    onSurfaceVariant = Color(0xFFC1C7CF),
+    outline = Color(0xFF8B9199),
+    outlineVariant = Color(0xFF41474E)
 )
 
 @Composable

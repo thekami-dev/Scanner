@@ -13,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
 import com.scann.thekami.model.QrContentEncoder
 import com.scann.thekami.model.QrContentType
@@ -41,6 +42,7 @@ fun GeneratorScreen() {
     var emailBody by remember { mutableStateOf("") }
     var smsNumber by remember { mutableStateOf("") }
     var smsMessage by remember { mutableStateOf("") }
+    val inputShape = RoundedCornerShape(16.dp)
 
     fun buildEncodedContent(): String {
         return when (selectedType) {
@@ -112,6 +114,7 @@ fun GeneratorScreen() {
                             onValueChange = { textValue = it },
                             label = { Text("Enter your text") },
                             modifier = Modifier.fillMaxWidth(),
+                            shape = inputShape,
                             minLines = 2,
                             maxLines = 5
                         )
@@ -122,6 +125,7 @@ fun GeneratorScreen() {
                             onValueChange = { urlValue = it },
                             label = { Text("Enter a link (e.g. example.com)") },
                             modifier = Modifier.fillMaxWidth(),
+                            shape = inputShape,
                             singleLine = true
                         )
                     }
@@ -131,6 +135,7 @@ fun GeneratorScreen() {
                             onValueChange = { wifiSsid = it },
                             label = { Text("Network name (SSID)") },
                             modifier = Modifier.fillMaxWidth(),
+                            shape = inputShape,
                             singleLine = true
                         )
                         Spacer(modifier = Modifier.height(12.dp))
@@ -151,6 +156,7 @@ fun GeneratorScreen() {
                                 onValueChange = { wifiPassword = it },
                                 label = { Text("Password") },
                                 modifier = Modifier.fillMaxWidth(),
+                                shape = inputShape,
                                 singleLine = true
                             )
                         }
@@ -169,6 +175,7 @@ fun GeneratorScreen() {
                             onValueChange = { contactName = it },
                             label = { Text("Full name") },
                             modifier = Modifier.fillMaxWidth(),
+                            shape = inputShape,
                             singleLine = true
                         )
                         Spacer(modifier = Modifier.height(12.dp))
@@ -177,6 +184,7 @@ fun GeneratorScreen() {
                             onValueChange = { contactPhone = it },
                             label = { Text("Phone number") },
                             modifier = Modifier.fillMaxWidth(),
+                            shape = inputShape,
                             singleLine = true
                         )
                         Spacer(modifier = Modifier.height(12.dp))
@@ -185,6 +193,7 @@ fun GeneratorScreen() {
                             onValueChange = { contactEmail = it },
                             label = { Text("Email (optional)") },
                             modifier = Modifier.fillMaxWidth(),
+                            shape = inputShape,
                             singleLine = true
                         )
                         Spacer(modifier = Modifier.height(12.dp))
@@ -193,6 +202,7 @@ fun GeneratorScreen() {
                             onValueChange = { contactOrg = it },
                             label = { Text("Organization (optional)") },
                             modifier = Modifier.fillMaxWidth(),
+                            shape = inputShape,
                             singleLine = true
                         )
                     }
@@ -202,6 +212,7 @@ fun GeneratorScreen() {
                             onValueChange = { phoneValue = it },
                             label = { Text("Phone number") },
                             modifier = Modifier.fillMaxWidth(),
+                            shape = inputShape,
                             singleLine = true
                         )
                     }
@@ -211,6 +222,7 @@ fun GeneratorScreen() {
                             onValueChange = { emailAddress = it },
                             label = { Text("Email address") },
                             modifier = Modifier.fillMaxWidth(),
+                            shape = inputShape,
                             singleLine = true
                         )
                         Spacer(modifier = Modifier.height(12.dp))
@@ -219,6 +231,7 @@ fun GeneratorScreen() {
                             onValueChange = { emailSubject = it },
                             label = { Text("Subject (optional)") },
                             modifier = Modifier.fillMaxWidth(),
+                            shape = inputShape,
                             singleLine = true
                         )
                         Spacer(modifier = Modifier.height(12.dp))
@@ -227,6 +240,7 @@ fun GeneratorScreen() {
                             onValueChange = { emailBody = it },
                             label = { Text("Message (optional)") },
                             modifier = Modifier.fillMaxWidth(),
+                            shape = inputShape,
                             minLines = 2,
                             maxLines = 4
                         )
@@ -237,6 +251,7 @@ fun GeneratorScreen() {
                             onValueChange = { smsNumber = it },
                             label = { Text("Phone number") },
                             modifier = Modifier.fillMaxWidth(),
+                            shape = inputShape,
                             singleLine = true
                         )
                         Spacer(modifier = Modifier.height(12.dp))
@@ -245,6 +260,7 @@ fun GeneratorScreen() {
                             onValueChange = { smsMessage = it },
                             label = { Text("Message (optional)") },
                             modifier = Modifier.fillMaxWidth(),
+                            shape = inputShape,
                             minLines = 2,
                             maxLines = 4
                         )
@@ -255,6 +271,8 @@ fun GeneratorScreen() {
 
                 Button(
                     onClick = { generateQr() },
+                    shape = RoundedCornerShape(16.dp),
+                    enabled = buildEncodedContent().isNotBlank(),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp)

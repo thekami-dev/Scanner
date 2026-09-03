@@ -12,6 +12,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.unit.dp
 import com.scann.thekami.model.ScanAction
 import com.scann.thekami.model.ScanResult
@@ -24,6 +26,7 @@ import com.scann.thekami.ui.screens.ScannerScreen
 import com.scann.thekami.ui.screens.SettingsScreen
 import com.scann.thekami.ui.theme.ScannTheme
 import com.scann.thekami.util.ScanActionHandler
+import com.scann.thekami.util.NotificationController
 
 class MainActivity : ComponentActivity() {
 
@@ -81,30 +84,45 @@ fun ScannApp(
     }
 
     ScannTheme {
+        LaunchedEffect(Unit) {
+            if (NotificationController.isCreateNotificationEnabled(context)) {
+                NotificationController.showCreateNotification(context)
+            }
+        }
         Surface(modifier = Modifier.fillMaxSize()) {
             BackHandler(enabled = overlay !is Overlay.None) {
                 overlay = Overlay.None
             }
 
             Box(modifier = Modifier.fillMaxSize()) {
-                when (selectedTab) {
-                    NavTab.SCAN -> {
-                        key(overlay is Overlay.None) {
-                            ScannerScreen(
-                                onBarcodeScanned = { result ->
-                                    overlay = Overlay.Result(result)
-                                }
-                            )
-                        }
+                // Keep CameraX bound while navigating so returning to Scan is instant.
+                ScannerScreen(
+                    isActive = selectedTab == NavTab.SCAN && overlay is Overlay.None,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .alpha(if (selectedTab == NavTab.SCAN) 1f else 0f)
+                        .zIndex(if (selectedTab == NavTab.SCAN) 0f else -1f),
+                    onBarcodeScanned = { result ->
+                        overlay = Overlay.Result(result)
                     }
-                    NavTab.CREATE -> {
-                        GeneratorScreen()
-                    }
-                    NavTab.SETTINGS -> {
-                        SettingsScreen(
-                            onAboutClick = { overlay = Overlay.About }
-                        )
-                    }
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .alpha(if (selectedTab == NavTab.CREATE) 1f else 0f)
+                        .zIndex(if (selectedTab == NavTab.CREATE) 0f else -1f)
+                ) {
+                    GeneratorScreen()
+                }
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .alpha(if (selectedTab == NavTab.SETTINGS) 1f else 0f)
+                        .zIndex(if (selectedTab == NavTab.SETTINGS) 0f else -1f)
+                ) {
+                    SettingsScreen(
+                        onAboutClick = { overlay = Overlay.About }
+                    )
                 }
 
                 if (overlay is Overlay.None) {
@@ -113,6 +131,7 @@ fun ScannApp(
                         onTabSelected = { selectedTab = it },
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
+                            .zIndex(1f)
                             .padding(horizontal = 32.dp, vertical = 24.dp)
                             .navigationBarsPadding()
                     )
@@ -120,18 +139,20 @@ fun ScannApp(
 
                 when (val current = overlay) {
                     is Overlay.Result -> {
-                        ResultScreen(
+                        Box(modifier = Modifier.fillMaxSize().zIndex(2f)) {
+                            ResultScreen(
                             scanResult = current.scanResult,
                             onBack = { overlay = Overlay.None },
                             onAction = { action: ScanAction ->
                                 ScanActionHandler.handle(context, action)
                             }
-                        )
+                            )
+                        }
                     }
                     is Overlay.About -> {
-                        AboutScreen(
-                            onBack = { overlay = Overlay.None }
-                        )
+                        Box(modifier = Modifier.fillMaxSize().zIndex(2f)) {
+                            AboutScreen(onBack = { overlay = Overlay.None })
+                        }
                     }
                     is Overlay.None -> {}
                 }

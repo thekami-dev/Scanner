@@ -2,6 +2,9 @@ package com.scann.thekami.ui.screens
 
 import android.content.Intent
 import android.net.Uri
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -11,9 +14,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -25,6 +29,8 @@ import coil.compose.AsyncImage
 import com.scann.thekami.BuildConfig
 import com.scann.thekami.R
 import com.scann.thekami.ads.BannerAdCard
+import com.scann.thekami.util.NotificationController
+import androidx.core.content.ContextCompat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,6 +38,17 @@ fun SettingsScreen(
     onAboutClick: () -> Unit
 ) {
     val context = LocalContext.current
+    var createNotificationEnabled by remember {
+        mutableStateOf(NotificationController.isCreateNotificationEnabled(context))
+    }
+    val notificationPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            createNotificationEnabled = true
+            NotificationController.setCreateNotificationEnabled(context, true)
+        }
+    }
 
     fun openUrl(url: String) {
         try {
@@ -54,6 +71,26 @@ fun SettingsScreen(
                 .padding(horizontal = 16.dp)
         ) {
             Spacer(modifier = Modifier.height(8.dp))
+
+            SectionLabel("Quick access")
+            SettingsCard {
+                NotificationSettingRow(
+                    enabled = createNotificationEnabled,
+                    onCheckedChange = { checked ->
+                        if (checked && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                            ContextCompat.checkSelfPermission(
+                                context,
+                                Manifest.permission.POST_NOTIFICATIONS
+                            ) != PackageManager.PERMISSION_GRANTED
+                        ) {
+                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        } else {
+                            createNotificationEnabled = checked
+                            NotificationController.setCreateNotificationEnabled(context, checked)
+                        }
+                    }
+                )
+            }
 
             SectionLabel("About")
             SettingsCard {
@@ -128,7 +165,11 @@ fun SettingsScreen(
                 AsyncImage(
                     model = "https://www.thekami.tech/logo.png",
                     contentDescription = "TheKami",
-                    modifier = Modifier.height(16.dp)
+                    modifier = Modifier
+                        .height(16.dp)
+                        .clickable {
+                            openUrl("https://www.thekami.tech")
+                        }
                 )
             }
         }
@@ -199,6 +240,35 @@ private fun SettingsDivider() {
         modifier = Modifier.padding(horizontal = 16.dp),
         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
     )
+}
+
+@Composable
+private fun NotificationSettingRow(
+    enabled: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.Filled.NotificationsActive,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text("Create QR shortcut", style = MaterialTheme.typography.bodyLarge)
+            Text(
+                "Show Create QR code in your notifications",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Switch(checked = enabled, onCheckedChange = onCheckedChange)
+    }
 }
 
 @Composable
