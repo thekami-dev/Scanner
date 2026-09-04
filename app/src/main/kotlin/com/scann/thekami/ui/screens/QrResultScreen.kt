@@ -8,7 +8,6 @@ import android.os.Environment
 import android.provider.MediaStore
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -28,9 +27,14 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
 
+// QR card: outer = inner + padding (12 + 24 = 36) — already correct
 private val QrContainerPadding = 24.dp
-private val QrInnerRadius = 12.dp // MaterialTheme.shapes.large default radius
+private val QrInnerRadius = 12.dp
 private val QrContainerRadius = QrInnerRadius + QrContainerPadding
+
+// Action buttons: shared radius so Save/Share match each other and
+// feel related to the rest of the app's rounder shape language
+private val ActionButtonRadius = 18.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -103,7 +107,11 @@ fun QrResultScreen(
                 title = { Text("Your QR Code") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            Icons.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
                 }
             )
@@ -146,23 +154,24 @@ fun QrResultScreen(
             ) {
                 OutlinedButton(
                     onClick = { saveQrToGallery() },
-                    shape = CircleShape,
+                    shape = RoundedCornerShape(ActionButtonRadius),
                     modifier = Modifier
                         .weight(1f)
-                        .height(52.dp)
+                        .height(56.dp)
                 ) {
-                    Icon(Icons.Filled.Download, contentDescription = null)
+                    Icon(Icons.Filled.Download, contentDescription = null, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Save")
                 }
                 Button(
                     onClick = { shareQr() },
-                    shape = CircleShape,
+                    shape = RoundedCornerShape(ActionButtonRadius),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp),
                     modifier = Modifier
                         .weight(1f)
-                        .height(52.dp)
+                        .height(56.dp)
                 ) {
-                    Icon(Icons.Filled.Share, contentDescription = null)
+                    Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Share")
                 }

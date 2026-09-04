@@ -90,7 +90,7 @@ private fun NavItem(
 
     val contentColor by animateColorAsState(
         targetValue = if (selected) {
-            MaterialTheme.colorScheme.onPrimaryContainer
+            MaterialTheme.colorScheme.primary
         } else {
             MaterialTheme.colorScheme.onSurfaceVariant
         },
@@ -115,7 +115,7 @@ private fun NavItem(
             imageVector = tab.icon,
             contentDescription = tab.label,
             tint = contentColor,
-            modifier = Modifier.size(24.dp)
+            modifier = Modifier.size(22.dp)
         )
         Spacer(modifier = Modifier.height(3.dp))
         Text(
