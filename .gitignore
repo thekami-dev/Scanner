@@ -32,3 +32,4 @@ google-services.json
 
 # Android Profiling
 *.hprof
+keystore_base64.txt
