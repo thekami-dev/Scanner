@@ -31,7 +31,7 @@ fun BannerAdCard(modifier: Modifier = Modifier) {
             factory = { ctx ->
                 AdView(ctx).apply {
                     setAdSize(AdSize.BANNER)
-                    adUnitId = if (BuildConfig.DEBUG) TEST_BANNER_AD_UNIT_ID else PROD_BANNER_AD_UNIT_ID
+                    adUnitId = PROD_BANNER_AD_UNIT_ID
                     adListener = object : AdListener() {
                         override fun onAdLoaded() {
                             status = "ad: loaded"
