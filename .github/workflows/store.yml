@@ -15,7 +15,6 @@ concurrency:
 env:
   TAG_PREFIX: "store-v"
   RELEASE_TITLE: "Scann Production"
-  MAKE_LATEST: "true"
 
 jobs:
   release:
@@ -65,8 +64,8 @@ jobs:
             echo "keyPassword=$KEY_PASSWORD"
           } > key.properties
 
-      - name: Build signed release APK
-        run: ./gradlew assembleRelease
+      - name: Build signed release APK and AAB
+        run: ./gradlew assembleRelease bundleRelease
 
       - name: Verify APK signature and rename
         run: |
@@ -75,7 +74,7 @@ jobs:
           "$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/apksigner" verify "$APK"
           mv "$APK" "${{ steps.ver.outputs.name }}"
 
-      - name: Create GitHub Release
+      - name: Create GitHub Release (APK only)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -83,7 +82,16 @@ jobs:
             --target "$GITHUB_SHA" \
             --title "$RELEASE_TITLE ${{ steps.ver.outputs.tag }}" \
             --generate-notes \
-            --latest="$MAKE_LATEST"
+            --latest
+
+      - name: Upload AAB to Google Play (Production)
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
+          packageName: com.scann.thekami
+          releaseFiles: app/build/outputs/bundle/release/*.aab
+          track: production
+          status: completed
 
       - name: Clean up signing files
         if: always()
