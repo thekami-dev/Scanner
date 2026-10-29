@@ -8,6 +8,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import com.scann.thekami.ui.components.FloatingNavClearance
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -122,7 +123,8 @@ fun QrResultScreen(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .padding(24.dp),
+                .padding(24.dp)
+                .padding(bottom = FloatingNavClearance),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {

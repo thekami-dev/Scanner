@@ -10,6 +10,7 @@ import com.google.android.gms.ads.MobileAds
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.material3.Surface
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -85,7 +86,9 @@ fun ScannApp(
         }
     }
 
-    ScannTheme {
+    val onCamera = selectedTab == NavTab.SCAN && overlay is Overlay.None
+
+    ScannTheme(lightSystemBars = !isSystemInDarkTheme() && !onCamera) {
         LaunchedEffect(Unit) {
             if (NotificationController.isCreateNotificationEnabled(context)) {
                 NotificationController.showCreateNotification(context)

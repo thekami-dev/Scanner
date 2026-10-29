@@ -36,6 +36,11 @@ enum class NavTab(val label: String, val icon: ImageVector) {
 private val NavBarPadding = 8.dp
 private val NavItemRadius = 20.dp
 private val NavBarRadius = NavItemRadius + NavBarPadding // 28.dp
+private val NavBarHeight = 72.dp
+
+// Bottom space a screen must leave so content clears the floating nav:
+// nav height + 24dp margin (MainActivity) + 16dp gap
+val FloatingNavClearance = NavBarHeight + 24.dp + 16.dp
 
 @Composable
 fun FloatingBottomNav(
@@ -48,7 +53,7 @@ fun FloatingBottomNav(
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp,
         shadowElevation = 16.dp,
-        modifier = modifier.height(72.dp)
+        modifier = modifier.height(NavBarHeight)
     ) {
         Row(
             modifier = Modifier
