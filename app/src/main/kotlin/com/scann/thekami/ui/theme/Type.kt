@@ -14,35 +14,33 @@ val UbuntuFontFamily = FontFamily(
     Font(R.font.ubuntu_bold, FontWeight.Bold)
 )
 
+private fun TextStyle.ubuntu() = copy(fontFamily = UbuntuFontFamily)
+
+private val Default = Typography()
+
 val ScannTypography = Typography(
-    headlineSmall = TextStyle(
-        fontFamily = UbuntuFontFamily,
+    displayLarge = Default.displayLarge.ubuntu(),
+    displayMedium = Default.displayMedium.ubuntu(),
+    displaySmall = Default.displaySmall.ubuntu(),
+    headlineLarge = Default.headlineLarge.ubuntu(),
+    headlineMedium = Default.headlineMedium.ubuntu(),
+    headlineSmall = Default.headlineSmall.ubuntu().copy(
         fontWeight = FontWeight.Bold,
         fontSize = 24.sp
     ),
-    titleLarge = TextStyle(
-        fontFamily = UbuntuFontFamily,
+    titleLarge = Default.titleLarge.ubuntu().copy(
         fontWeight = FontWeight.Bold,
         fontSize = 22.sp
     ),
-    titleMedium = TextStyle(
-        fontFamily = UbuntuFontFamily,
+    titleMedium = Default.titleMedium.ubuntu().copy(
         fontWeight = FontWeight.Medium,
         fontSize = 18.sp
     ),
-    bodyLarge = TextStyle(
-        fontFamily = UbuntuFontFamily,
-        fontWeight = FontWeight.Normal,
-        fontSize = 16.sp
-    ),
-    bodyMedium = TextStyle(
-        fontFamily = UbuntuFontFamily,
-        fontWeight = FontWeight.Normal,
-        fontSize = 14.sp
-    ),
-    bodySmall = TextStyle(
-        fontFamily = UbuntuFontFamily,
-        fontWeight = FontWeight.Normal,
-        fontSize = 12.sp
-    )
+    titleSmall = Default.titleSmall.ubuntu(),
+    bodyLarge = Default.bodyLarge.ubuntu(),
+    bodyMedium = Default.bodyMedium.ubuntu(),
+    bodySmall = Default.bodySmall.ubuntu(),
+    labelLarge = Default.labelLarge.ubuntu(),
+    labelMedium = Default.labelMedium.ubuntu(),
+    labelSmall = Default.labelSmall.ubuntu()
 )

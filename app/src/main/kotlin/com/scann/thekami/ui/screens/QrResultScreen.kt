@@ -1,11 +1,16 @@
 package com.scann.thekami.ui.screens
 
+import android.Manifest
 import android.content.ContentValues
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -18,22 +23,24 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
-import com.scann.thekami.ads.BannerAdCard
+import com.scann.thekami.ui.components.BottomNavClearance
+import com.scann.thekami.ui.components.BottomNavHeight
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
 
-// QR card: outer = inner + padding (12 + 24 = 36) — already correct
+// QR card: outer = inner + padding (12 + 24 = 36)
 private val QrContainerPadding = 24.dp
 private val QrInnerRadius = 12.dp
 private val QrContainerRadius = QrInnerRadius + QrContainerPadding
 
-// Action buttons: shared radius so Save/Share match each other and
-// feel related to the rest of the app's rounder shape language
+// Shared radius so Save/Share match each other and the rest of the app
 private val ActionButtonRadius = 18.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -46,6 +53,12 @@ fun QrResultScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
+    BackHandler(onBack = onBack)
+
+    fun showMessage(message: String) {
+        coroutineScope.launch { snackbarHostState.showSnackbar(message) }
+    }
+
     fun saveQrToGallery() {
         try {
             val filename = "Scann_QR_${System.currentTimeMillis()}.png"
@@ -55,14 +68,17 @@ fun QrResultScreen(
                     put(MediaStore.Images.Media.MIME_TYPE, "image/png")
                     put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/Scann")
                 }
-                val uri = context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+                val uri = context.contentResolver.insert(
+                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                    contentValues
+                )
                 if (uri != null) {
                     context.contentResolver.openOutputStream(uri)?.use { out ->
                         qrBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
                     }
-                    coroutineScope.launch { snackbarHostState.showSnackbar("Saved to Pictures/Scann") }
+                    showMessage("Saved to Pictures/Scann")
                 } else {
-                    coroutineScope.launch { snackbarHostState.showSnackbar("Failed to save QR code") }
+                    showMessage("Failed to save QR code")
                 }
             } else {
                 val picturesDir = File(
@@ -70,22 +86,41 @@ fun QrResultScreen(
                     "Scann"
                 )
                 picturesDir.mkdirs()
-                val file = File(picturesDir, filename)
-                FileOutputStream(file).use { out ->
+                FileOutputStream(File(picturesDir, filename)).use { out ->
                     qrBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
                 }
-                coroutineScope.launch { snackbarHostState.showSnackbar("Saved to Pictures/Scann") }
+                showMessage("Saved to Pictures/Scann")
             }
         } catch (e: Exception) {
-            coroutineScope.launch { snackbarHostState.showSnackbar("Failed to save: ${e.message}") }
+            showMessage("Failed to save: ${e.message}")
+        }
+    }
+
+    // Android 9 and below need WRITE_EXTERNAL_STORAGE to save into Pictures
+    val storagePermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) saveQrToGallery() else showMessage("Storage permission is needed to save")
+    }
+
+    fun onSaveClick() {
+        val needsPermission = Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+            ) != PackageManager.PERMISSION_GRANTED
+
+        if (needsPermission) {
+            storagePermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        } else {
+            saveQrToGallery()
         }
     }
 
     fun shareQr() {
         try {
-            val cacheDir = File(context.cacheDir, "qr_share")
-            cacheDir.mkdirs()
-            val file = File(cacheDir, "scann_qr.png")
+            val shareDir = File(context.cacheDir, "qr_share").apply { mkdirs() }
+            val file = File(shareDir, "scann_qr.png")
             FileOutputStream(file).use { out ->
                 qrBitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
             }
@@ -97,7 +132,7 @@ fun QrResultScreen(
             }
             context.startActivity(Intent.createChooser(intent, "Share QR Code"))
         } catch (e: Exception) {
-            // Sharing failed silently
+            showMessage("Couldn't share QR code")
         }
     }
 
@@ -116,19 +151,24 @@ fun QrResultScreen(
                 }
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        // The bottom nav bar overlays this screen, so lift the snackbar above it
+        snackbarHost = {
+            SnackbarHost(snackbarHostState, modifier = Modifier.padding(bottom = BottomNavHeight))
+        }
     ) { padding ->
         Column(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .padding(24.dp),
+                .padding(24.dp)
+                .padding(bottom = BottomNavClearance),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+            // QR codes need a light quiet zone, so the card stays white in dark mode too
             Surface(
                 shape = RoundedCornerShape(QrContainerRadius),
-                color = MaterialTheme.colorScheme.surface,
+                color = Color.White,
                 shadowElevation = 4.dp,
                 modifier = Modifier
                     .fillMaxWidth(0.85f)
@@ -140,7 +180,7 @@ fun QrResultScreen(
                         contentDescription = "Generated QR Code",
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(24.dp)
+                            .padding(QrContainerPadding)
                             .clip(RoundedCornerShape(QrInnerRadius))
                     )
                 }
@@ -153,7 +193,7 @@ fun QrResultScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 OutlinedButton(
-                    onClick = { saveQrToGallery() },
+                    onClick = ::onSaveClick,
                     shape = RoundedCornerShape(ActionButtonRadius),
                     modifier = Modifier
                         .weight(1f)
@@ -164,7 +204,7 @@ fun QrResultScreen(
                     Text("Save")
                 }
                 Button(
-                    onClick = { shareQr() },
+                    onClick = ::shareQr,
                     shape = RoundedCornerShape(ActionButtonRadius),
                     elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp),
                     modifier = Modifier
@@ -176,10 +216,6 @@ fun QrResultScreen(
                     Text("Share")
                 }
             }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            BannerAdCard(modifier = Modifier.fillMaxWidth(0.85f))
         }
     }
 }
