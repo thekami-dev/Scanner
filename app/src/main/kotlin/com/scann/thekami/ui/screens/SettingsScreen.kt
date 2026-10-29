@@ -8,6 +8,7 @@ import android.os.Build
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import com.scann.thekami.ui.components.FloatingNavClearance
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -35,7 +36,6 @@ import coil.compose.AsyncImage
 import com.google.android.play.core.review.ReviewManagerFactory
 import com.scann.thekami.BuildConfig
 import com.scann.thekami.R
-import com.scann.thekami.ads.BannerAdCard
 import com.scann.thekami.util.NotificationController
 import androidx.core.content.ContextCompat
 
@@ -107,7 +107,7 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp)
-                .padding(bottom = 140.dp)
+                .padding(bottom = FloatingNavClearance)
         ) {
             Spacer(modifier = Modifier.height(4.dp))
 
@@ -190,12 +190,6 @@ fun SettingsScreen(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-
-            BannerAdCard(modifier = Modifier.fillMaxWidth())
-
-            Spacer(modifier = Modifier.height(28.dp))
-
-            Spacer(modifier = Modifier.height(20.dp))
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,

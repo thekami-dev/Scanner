@@ -2,6 +2,7 @@ package com.scann.thekami.ui.screens
 
 import android.graphics.Bitmap
 import androidx.compose.foundation.layout.*
+import com.scann.thekami.ui.components.FloatingNavClearance
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -86,6 +87,8 @@ fun GeneratorScreen() {
         Column(
             modifier = Modifier
                 .padding(padding)
+                .consumeWindowInsets(padding)
+                .imePadding()
                 .fillMaxSize()
         ) {
             LazyRow(
@@ -286,7 +289,7 @@ fun GeneratorScreen() {
                     Text("Generate QR Code")
                 }
 
-                Spacer(modifier = Modifier.height(140.dp))
+                Spacer(modifier = Modifier.height(FloatingNavClearance))
             }
         }
     }

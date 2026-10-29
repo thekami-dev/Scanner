@@ -8,6 +8,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import com.scann.thekami.ui.components.FloatingNavClearance
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -22,7 +23,6 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
-import com.scann.thekami.ads.BannerAdCard
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
@@ -122,7 +122,8 @@ fun QrResultScreen(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .padding(24.dp),
+                .padding(24.dp)
+                .padding(bottom = FloatingNavClearance),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -176,10 +177,6 @@ fun QrResultScreen(
                     Text("Share")
                 }
             }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            BannerAdCard(modifier = Modifier.fillMaxWidth(0.85f))
         }
     }
 }
