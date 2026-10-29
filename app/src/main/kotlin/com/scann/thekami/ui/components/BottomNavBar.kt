@@ -24,7 +24,8 @@ enum class NavTab(val label: String, val icon: ImageVector) {
 
 // Space a screen must leave at its bottom so content clears the nav bar:
 // NavigationBar height (80dp) + 16dp gap. The system-bar inset is handled separately.
-val BottomNavClearance = 80.dp + 16.dp
+val BottomNavHeight = 80.dp
+val BottomNavClearance = BottomNavHeight + 16.dp
 
 @Composable
 fun BottomNavBar(
