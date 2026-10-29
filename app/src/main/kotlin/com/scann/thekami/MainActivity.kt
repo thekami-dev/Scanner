@@ -10,15 +10,15 @@ import com.google.android.gms.ads.MobileAds
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.material3.Surface
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.zIndex
-import androidx.compose.ui.unit.dp
 import com.scann.thekami.model.ScanAction
 import com.scann.thekami.model.ScanResult
-import com.scann.thekami.ui.components.FloatingBottomNav
+import com.scann.thekami.ui.components.BottomNavBar
 import com.scann.thekami.ui.components.NavTab
 import com.scann.thekami.ui.screens.AboutScreen
 import com.scann.thekami.ui.screens.GeneratorScreen
@@ -85,7 +85,9 @@ fun ScannApp(
         }
     }
 
-    ScannTheme {
+    val onCamera = selectedTab == NavTab.SCAN && overlay is Overlay.None
+
+    ScannTheme(lightStatusBarIcons = !isSystemInDarkTheme() && !onCamera) {
         LaunchedEffect(Unit) {
             if (NotificationController.isCreateNotificationEnabled(context)) {
                 NotificationController.showCreateNotification(context)
@@ -128,14 +130,12 @@ fun ScannApp(
                 }
 
                 if (overlay is Overlay.None) {
-                    FloatingBottomNav(
+                    BottomNavBar(
                         selectedTab = selectedTab,
                         onTabSelected = { selectedTab = it },
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .zIndex(1f)
-                            .padding(horizontal = 32.dp, vertical = 24.dp)
-                            .navigationBarsPadding()
                     )
                 }
 

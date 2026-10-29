@@ -1,6 +1,5 @@
 import java.util.Properties
 import java.io.FileInputStream
-import java.io.ByteArrayOutputStream
 
 plugins {
     id("com.android.application")
@@ -15,17 +14,12 @@ if (hasKeystoreProperties) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
-fun gitCommitCount(): Int {
-    return try {
-        val stdout = ByteArrayOutputStream()
-        exec {
-            commandLine("git", "rev-list", "--count", "HEAD")
-            standardOutput = stdout
-        }
-        stdout.toString().trim().toInt()
-    } catch (e: Exception) {
-        1
-    }
+
+fun gitCommitCount(): Int = try {
+    providers.exec { commandLine("git", "rev-list", "--count", "HEAD") }
+        .standardOutput.asText.get().trim().toInt()
+} catch (e: Exception) {
+    1
 }
 
 val appVersionCode = gitCommitCount()

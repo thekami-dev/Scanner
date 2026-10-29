@@ -3,6 +3,7 @@ package com.scann.thekami.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -10,18 +11,71 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import com.scann.thekami.model.ScanAction
 import com.scann.thekami.model.ScanResult
 import com.scann.thekami.model.ScanResultType
-import com.scann.thekami.ads.BannerAdCard
-import com.scann.thekami.model.ScanAction
 
-// Shared with QrResultScreen — keep these two in sync, or better,
-// move to a single Radii object (see note at bottom).
 private val CardContentPadding = 16.dp
-private val CardInnerRadius = 12.dp
-private val CardRadius = CardInnerRadius + CardContentPadding // 28.dp
+private val CardRadius = 16.dp
 private val ActionButtonRadius = 18.dp
+private val TypeIconTileSize = 44.dp
+private val TypeIconTileRadius = 12.dp
+
+private data class TypeInfo(val label: String, val icon: ImageVector)
+
+private fun ScanResultType.info(): TypeInfo = when (this) {
+    is ScanResultType.Url -> TypeInfo("Website Link", Icons.Filled.Language)
+    is ScanResultType.PlainText -> TypeInfo("Text", Icons.Filled.TextFields)
+    is ScanResultType.Phone -> TypeInfo("Phone Number", Icons.Filled.Call)
+    is ScanResultType.Email -> TypeInfo("Email", Icons.Filled.Email)
+    is ScanResultType.Sms -> TypeInfo("SMS Message", Icons.Filled.Sms)
+    is ScanResultType.Location -> TypeInfo("Location", Icons.Filled.Place)
+    is ScanResultType.WifiNetwork -> TypeInfo("Wi-Fi Network", Icons.Filled.Wifi)
+    is ScanResultType.Contact -> TypeInfo("Contact", Icons.Filled.Person)
+    is ScanResultType.CalendarEvent -> TypeInfo("Calendar Event", Icons.Filled.Event)
+    is ScanResultType.Unknown -> TypeInfo("Unknown", Icons.Filled.QrCode2)
+}
+
+// (label, value) pairs; a null label means the value is shown on its own
+private fun ScanResultType.fields(): List<Pair<String?, String>> = buildList {
+    when (val type = this@fields) {
+        is ScanResultType.Url -> add(null to type.value)
+        is ScanResultType.PlainText -> add(null to type.value)
+        is ScanResultType.Phone -> add(null to type.value)
+        is ScanResultType.Email -> {
+            add("To" to type.address)
+            if (!type.subject.isNullOrBlank()) add("Subject" to type.subject)
+            if (!type.body.isNullOrBlank()) add("Message" to type.body)
+        }
+        is ScanResultType.Sms -> {
+            add("To" to type.phoneNumber)
+            if (!type.message.isNullOrBlank()) add("Message" to type.message)
+        }
+        is ScanResultType.Location -> {
+            add("Latitude" to type.latitude.toString())
+            add("Longitude" to type.longitude.toString())
+        }
+        is ScanResultType.WifiNetwork -> {
+            add("Network" to type.ssid)
+            add("Security" to (type.encryptionType ?: "Open (no password)"))
+            if (!type.password.isNullOrBlank()) add("Password" to type.password)
+        }
+        is ScanResultType.Contact -> {
+            type.name?.let { add("Name" to it) }
+            type.phone?.let { add("Phone" to it) }
+            type.email?.let { add("Email" to it) }
+            type.organization?.let { add("Organization" to it) }
+        }
+        is ScanResultType.CalendarEvent -> {
+            type.title?.let { add("Title" to it) }
+            type.location?.let { add("Location" to it) }
+            type.description?.let { add("Description" to it) }
+        }
+        is ScanResultType.Unknown -> add(null to type.raw.ifBlank { "No data found" })
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,16 +107,28 @@ fun ResultScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(20.dp)
         ) {
-            ResultTypeLabel(scanResult)
+            ResultHeader(scanResult.type.info())
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(CardRadius)
+                shape = RoundedCornerShape(CardRadius),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                )
             ) {
-                Column(modifier = Modifier.padding(CardContentPadding)) {
-                    ResultContent(scanResult.type)
+                SelectionContainer {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(CardContentPadding),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        scanResult.type.fields().forEach { (label, value) ->
+                            ResultField(label, value)
+                        }
+                    }
                 }
             }
 
@@ -73,70 +139,47 @@ fun ResultScreen(
             Spacer(modifier = Modifier.height(20.dp))
 
             Text(
-                text = "Format: ${scanResult.format}",
+                text = "Format: ${scanResult.format.replace('_', ' ')}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            BannerAdCard(modifier = Modifier.fillMaxWidth())
         }
     }
 }
 
 @Composable
-private fun ResultTypeLabel(scanResult: ScanResult) {
-    val label = when (scanResult.type) {
-        is ScanResultType.Url -> "Website Link"
-        is ScanResultType.PlainText -> "Text"
-        is ScanResultType.Phone -> "Phone Number"
-        is ScanResultType.Email -> "Email"
-        is ScanResultType.Sms -> "SMS Message"
-        is ScanResultType.Location -> "Location"
-        is ScanResultType.WifiNetwork -> "Wi-Fi Network"
-        is ScanResultType.Contact -> "Contact"
-        is ScanResultType.CalendarEvent -> "Calendar Event"
-        is ScanResultType.Unknown -> "Unknown"
-    }
-    Text(text = label, style = MaterialTheme.typography.headlineSmall)
-}
-
-@Composable
-private fun ResultContent(type: ScanResultType) {
-    when (type) {
-        is ScanResultType.Url -> Text(type.value)
-        is ScanResultType.PlainText -> Text(type.value)
-        is ScanResultType.Phone -> Text(type.value)
-        is ScanResultType.Email -> {
-            Text("To: ${type.address}")
-            if (!type.subject.isNullOrBlank()) Text("Subject: ${type.subject}")
-            if (!type.body.isNullOrBlank()) Text("Body: ${type.body}")
-        }
-        is ScanResultType.Sms -> {
-            Text("To: ${type.phoneNumber}")
-            if (!type.message.isNullOrBlank()) Text("Message: ${type.message}")
-        }
-        is ScanResultType.Location -> Text("Lat: ${type.latitude}, Lng: ${type.longitude}")
-        is ScanResultType.WifiNetwork -> {
-            Text("Network: ${type.ssid}")
-            Text("Security: ${type.encryptionType ?: "Open (No Password)"}")
-            if (!type.password.isNullOrBlank()) {
-                Text("Password: ${type.password}")
+private fun ResultHeader(info: TypeInfo) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Surface(
+            shape = RoundedCornerShape(TypeIconTileRadius),
+            color = MaterialTheme.colorScheme.primaryContainer,
+            modifier = Modifier.size(TypeIconTileSize)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = info.icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(24.dp)
+                )
             }
         }
-        is ScanResultType.Contact -> {
-            type.name?.let { Text("Name: $it") }
-            type.phone?.let { Text("Phone: $it") }
-            type.email?.let { Text("Email: $it") }
-            type.organization?.let { Text("Organization: $it") }
+        Spacer(modifier = Modifier.width(14.dp))
+        Text(text = info.label, style = MaterialTheme.typography.headlineSmall)
+    }
+}
+
+@Composable
+private fun ResultField(label: String?, value: String) {
+    Column {
+        if (label != null) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
-        is ScanResultType.CalendarEvent -> {
-            type.title?.let { Text("Title: $it") }
-            type.location?.let { Text("Location: $it") }
-            type.description?.let { Text("Description: $it") }
-        }
-        is ScanResultType.Unknown -> Text(type.raw.ifBlank { "No data found" })
+        Text(text = value, style = MaterialTheme.typography.bodyLarge)
     }
 }
 
@@ -223,36 +266,23 @@ private fun ResultActions(scanResult: ScanResult, onAction: (ScanAction) -> Unit
 @Composable
 private fun ActionButton(
     text: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     filled: Boolean = true,
     onClick: () -> Unit
 ) {
     val shape = RoundedCornerShape(ActionButtonRadius)
-    val iconModifier = Modifier.height(20.dp)
+    val modifier = Modifier
+        .fillMaxWidth()
+        .height(52.dp)
+    val content: @Composable RowScope.() -> Unit = {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(text)
+    }
 
     if (filled) {
-        Button(
-            onClick = onClick,
-            shape = shape,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp)
-        ) {
-            Icon(icon, contentDescription = null, modifier = iconModifier)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(text)
-        }
+        Button(onClick = onClick, shape = shape, modifier = modifier, content = content)
     } else {
-        OutlinedButton(
-            onClick = onClick,
-            shape = shape,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp)
-        ) {
-            Icon(icon, contentDescription = null, modifier = iconModifier)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(text)
-        }
+        OutlinedButton(onClick = onClick, shape = shape, modifier = modifier, content = content)
     }
 }
