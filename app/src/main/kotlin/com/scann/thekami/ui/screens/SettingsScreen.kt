@@ -1,18 +1,22 @@
 package com.scann.thekami.ui.screens
 
-import android.content.Intent
-import android.net.Uri
 import android.Manifest
+import android.app.Activity
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
-import androidx.compose.foundation.Image
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.NotificationsActive
@@ -22,27 +26,26 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 import com.google.android.play.core.review.ReviewManagerFactory
 import com.scann.thekami.BuildConfig
 import com.scann.thekami.R
-import com.scann.thekami.ads.BannerAdCard
+import com.scann.thekami.ui.components.FloatingNavClearance
 import com.scann.thekami.util.NotificationController
-import androidx.core.content.ContextCompat
 
-// Nested-radius system, shared shape language with other screens
 private val CardRowPadding = 16.dp
-private val CardInnerRadius = 12.dp
-private val CardRadius = CardInnerRadius + 4.dp // 16.dp — cards are the outermost element here, no inner shape to nest against, so this stays a fixed constant rather than +padding
+private val CardRadius = 16.dp
+private val IconTileRadius = 10.dp
+private val IconTileSize = 38.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,8 +56,8 @@ fun SettingsScreen(
     var createNotificationEnabled by remember {
         mutableStateOf(NotificationController.isCreateNotificationEnabled(context))
     }
-    val notificationPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-        contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (granted) {
             createNotificationEnabled = true
@@ -76,7 +79,7 @@ fun SettingsScreen(
 
     fun launchInAppReview() {
         try {
-            val activity = context as? android.app.Activity
+            val activity = context as? Activity
             if (activity == null) {
                 openPlayStoreListing()
                 return
@@ -85,8 +88,7 @@ fun SettingsScreen(
             val request = reviewManager.requestReviewFlow()
             request.addOnCompleteListener { task ->
                 if (task.isSuccessful) {
-                    val reviewInfo = task.result
-                    reviewManager.launchReviewFlow(activity, reviewInfo)
+                    reviewManager.launchReviewFlow(activity, task.result)
                 } else {
                     openPlayStoreListing()
                 }
@@ -96,9 +98,25 @@ fun SettingsScreen(
         }
     }
 
+    fun onNotificationToggle(checked: Boolean) {
+        val needsPermission = checked &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+
+        if (needsPermission) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            createNotificationEnabled = checked
+            NotificationController.setCreateNotificationEnabled(context, checked)
+        }
+    }
+
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Settings", fontWeight = FontWeight.SemiBold) })
+            TopAppBar(title = { Text("Settings") })
         }
     ) { padding ->
         Column(
@@ -107,7 +125,7 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp)
-                .padding(bottom = 140.dp)
+                .padding(bottom = FloatingNavClearance)
         ) {
             Spacer(modifier = Modifier.height(4.dp))
 
@@ -115,19 +133,7 @@ fun SettingsScreen(
             SettingsCard {
                 NotificationSettingRow(
                     enabled = createNotificationEnabled,
-                    onCheckedChange = { checked ->
-                        if (checked && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                            ContextCompat.checkSelfPermission(
-                                context,
-                                Manifest.permission.POST_NOTIFICATIONS
-                            ) != PackageManager.PERMISSION_GRANTED
-                        ) {
-                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                        } else {
-                            createNotificationEnabled = checked
-                            NotificationController.setCreateNotificationEnabled(context, checked)
-                        }
-                    }
+                    onCheckedChange = ::onNotificationToggle
                 )
             }
 
@@ -146,7 +152,7 @@ fun SettingsScreen(
                     icon = Icons.Filled.StarRate,
                     title = "Rate Scann",
                     subtitle = "Enjoying the app? Leave us a rating",
-                    onClick = { launchInAppReview() }
+                    onClick = ::launchInAppReview
                 )
                 SettingsDivider()
                 SettingsRow(
@@ -164,13 +170,13 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally)
             ) {
-                SocialIconButton(R.drawable.ic_linkedin) {
+                SocialIconButton(R.drawable.ic_linkedin, "LinkedIn") {
                     openUrl("https://www.linkedin.com/company/thekamiofficial")
                 }
-                SocialIconButton(R.drawable.ic_discord) {
+                SocialIconButton(R.drawable.ic_discord, "Discord") {
                     openUrl("https://www.thekami.tech/discord/")
                 }
-                SocialIconButton(R.drawable.ic_github) {
+                SocialIconButton(R.drawable.ic_github, "GitHub") {
                     openUrl("https://github.com/thekami-dev")
                 }
             }
@@ -180,7 +186,7 @@ fun SettingsScreen(
             SectionLabel("More from TheKami")
             SettingsCard {
                 SettingsRow(
-                    icon = null,
+                    icon = Icons.Filled.Apps,
                     title = "More apps by TheKami",
                     subtitle = "Explore our other apps on Play Store",
                     onClick = {
@@ -191,19 +197,13 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            BannerAdCard(modifier = Modifier.fillMaxWidth())
-
-            Spacer(modifier = Modifier.height(28.dp))
-
-            Spacer(modifier = Modifier.height(20.dp))
-
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 24.dp)
-                    .clickable { openUrl("https://www.thekami.tech") }
+                    .clickable(role = Role.Button) { openUrl("https://www.thekami.tech") }
             ) {
                 Text(
                     text = "Made by",
@@ -227,7 +227,7 @@ private fun SectionLabel(text: String) {
         text = text.uppercase(),
         style = MaterialTheme.typography.labelMedium.copy(
             letterSpacing = 0.8.sp,
-            fontWeight = FontWeight.SemiBold
+            fontWeight = FontWeight.Bold
         ),
         color = MaterialTheme.colorScheme.primary,
         modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
@@ -235,10 +235,14 @@ private fun SectionLabel(text: String) {
 }
 
 @Composable
+private fun settingsSurfaceColor() =
+    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+
+@Composable
 private fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
     Surface(
         shape = RoundedCornerShape(CardRadius),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+        color = settingsSurfaceColor(),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(content = content)
@@ -246,8 +250,26 @@ private fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
 }
 
 @Composable
+private fun IconTile(icon: ImageVector) {
+    Surface(
+        shape = RoundedCornerShape(IconTileRadius),
+        color = MaterialTheme.colorScheme.primaryContainer,
+        modifier = Modifier.size(IconTileSize)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+}
+
+@Composable
 private fun SettingsRow(
-    icon: ImageVector?,
+    icon: ImageVector,
     title: String,
     subtitle: String,
     onClick: () -> Unit
@@ -255,27 +277,12 @@ private fun SettingsRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
+            .clickable(role = Role.Button, onClick = onClick)
             .padding(CardRowPadding),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (icon != null) {
-            Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                modifier = Modifier.size(38.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.width(14.dp))
-        }
+        IconTile(icon)
+        Spacer(modifier = Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(text = title, style = MaterialTheme.typography.bodyLarge)
             Text(
@@ -287,7 +294,7 @@ private fun SettingsRow(
         Icon(
             imageVector = Icons.Filled.ChevronRight,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(20.dp)
         )
     }
@@ -309,23 +316,15 @@ private fun NotificationSettingRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .toggleable(
+                value = enabled,
+                role = Role.Switch,
+                onValueChange = onCheckedChange
+            )
             .padding(CardRowPadding),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Surface(
-            shape = RoundedCornerShape(10.dp),
-            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-            modifier = Modifier.size(38.dp)
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = Icons.Filled.NotificationsActive,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-        }
+        IconTile(Icons.Filled.NotificationsActive)
         Spacer(modifier = Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text("Create QR shortcut", style = MaterialTheme.typography.bodyLarge)
@@ -336,23 +335,23 @@ private fun NotificationSettingRow(
             )
         }
         Spacer(modifier = Modifier.width(8.dp))
-        Switch(checked = enabled, onCheckedChange = onCheckedChange)
+        Switch(checked = enabled, onCheckedChange = null)
     }
 }
 
 @Composable
-private fun SocialIconButton(iconRes: Int, onClick: () -> Unit) {
+private fun SocialIconButton(iconRes: Int, label: String, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
         shape = CircleShape,
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        color = settingsSurfaceColor(),
         modifier = Modifier.size(52.dp)
     ) {
         Box(contentAlignment = Alignment.Center) {
             Icon(
                 painter = painterResource(id = iconRes),
-                contentDescription = null,
-                tint = Color.Unspecified,
+                contentDescription = label,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(22.dp)
             )
         }
