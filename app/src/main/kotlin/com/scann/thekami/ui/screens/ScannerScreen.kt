@@ -16,7 +16,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import com.scann.thekami.ui.components.FloatingNavClearance
+import com.scann.thekami.ui.components.BottomNavClearance
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -284,7 +284,7 @@ fun ScannerScreen(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
                     .navigationBarsPadding()
-                    .padding(start = 24.dp, bottom = FloatingNavClearance)
+                    .padding(start = 24.dp, bottom = BottomNavClearance)
             ) {
                 CircleIconButton(
                     icon = Icons.Filled.PhotoLibrary,
@@ -298,7 +298,7 @@ fun ScannerScreen(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .navigationBarsPadding()
-                    .padding(end = 24.dp, bottom = FloatingNavClearance)
+                    .padding(end = 24.dp, bottom = BottomNavClearance)
             ) {
                 CircleIconButton(
                     icon = if (isFlashOn) Icons.Filled.FlashOn else Icons.Filled.FlashOff,

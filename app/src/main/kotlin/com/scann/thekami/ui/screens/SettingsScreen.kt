@@ -39,7 +39,7 @@ import coil.compose.AsyncImage
 import com.google.android.play.core.review.ReviewManagerFactory
 import com.scann.thekami.BuildConfig
 import com.scann.thekami.R
-import com.scann.thekami.ui.components.FloatingNavClearance
+import com.scann.thekami.ui.components.BottomNavClearance
 import com.scann.thekami.util.NotificationController
 
 private val CardRowPadding = 16.dp
@@ -125,7 +125,7 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp)
-                .padding(bottom = FloatingNavClearance)
+                .padding(bottom = BottomNavClearance)
         ) {
             Spacer(modifier = Modifier.height(4.dp))
 

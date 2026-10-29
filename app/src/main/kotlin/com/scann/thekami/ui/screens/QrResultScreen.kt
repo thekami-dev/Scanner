@@ -8,7 +8,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
-import com.scann.thekami.ui.components.FloatingNavClearance
+import com.scann.thekami.ui.components.BottomNavClearance
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -24,6 +24,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import com.scann.thekami.ads.BannerAdCard
 import kotlinx.coroutines.launch
 import java.io.File
@@ -127,7 +132,7 @@ fun QrResultScreen(
                 .padding(padding)
                 .fillMaxSize()
                 .padding(24.dp)
-                .padding(bottom = FloatingNavClearance),
+                .padding(bottom = BottomNavClearance),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -158,7 +163,7 @@ fun QrResultScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 OutlinedButton(
-                    onClick = { saveQrToGallery() },
+                    onClick = ::onSaveClick,
                     shape = RoundedCornerShape(ActionButtonRadius),
                     modifier = Modifier
                         .weight(1f)
