@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.Settings
+import android.util.Size
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -13,16 +14,27 @@ import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
+import androidx.camera.core.resolutionselector.AspectRatioStrategy
+import androidx.camera.core.resolutionselector.ResolutionSelector
+import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateRectAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,13 +48,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -50,6 +66,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.app.ActivityCompat
@@ -57,17 +75,28 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.scann.thekami.camera.BarcodeAnalyzer
+import com.scann.thekami.camera.DetectedBox
 import com.scann.thekami.model.ScanResult
-import com.scann.thekami.ui.components.BottomNavHeight
+import com.scann.thekami.ui.components.LocalAnimationsEnabled
+import com.scann.thekami.ui.components.bottomNavHeight
 import com.scann.thekami.util.GalleryScanner
+import com.scann.thekami.util.Haptics
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.roundToInt
 
 // Camera UI is always dark, whatever the app theme, so overlays use a fixed scrim
 private val ScanScrim = Color.Black.copy(alpha = 0.5f)
 private val ScanFrameSize = 260.dp
+private val DetectedPadding = 14.dp
+private val DetectedMinSide = 120.dp
+private val SuccessBadgeSize = 64.dp
 
 @Composable
 fun ScannerScreen(
@@ -76,11 +105,14 @@ fun ScannerScreen(
     onBarcodeScanned: (ScanResult) -> Unit
 ) {
     val context = LocalContext.current
+    val view = LocalView.current
     val activity = context as? Activity
     val lifecycleOwner = LocalLifecycleOwner.current
-    val reducedMotion = rememberReducedMotion()
+    val animations = LocalAnimationsEnabled.current
     val coroutineScope = rememberCoroutineScope()
     val isActiveState by rememberUpdatedState(isActive)
+    val animationsState by rememberUpdatedState(animations)
+    val currentOnBarcodeScanned by rememberUpdatedState(onBarcodeScanned)
 
     fun checkCameraPermission() =
         ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
@@ -93,14 +125,42 @@ fun ScannerScreen(
     var camera by remember { mutableStateOf<Camera?>(null) }
     var hasScanned by remember { mutableStateOf(false) }
     var showSuccessFlash by remember { mutableStateOf(false) }
+    var detectedRect by remember { mutableStateOf<Rect?>(null) }
+    var viewSize by remember { mutableStateOf(IntSize.Zero) }
     var isProcessingGalleryImage by remember { mutableStateOf(false) }
     var galleryScanFailed by remember { mutableStateOf(false) }
+
+    var zoomRatio by remember { mutableFloatStateOf(1f) }
+    var showZoomIndicator by remember { mutableStateOf(false) }
 
     // Reset scan state whenever this screen becomes active again (e.g. user backs out of the result screen)
     LaunchedEffect(isActive) {
         if (isActive) {
             hasScanned = false
             showSuccessFlash = false
+            detectedRect = null
+        }
+    }
+
+    LaunchedEffect(camera) {
+        zoomRatio = 1f
+    }
+
+    LaunchedEffect(zoomRatio) {
+        if (abs(zoomRatio - 1f) > 0.01f) {
+            showZoomIndicator = true
+            delay(1200)
+        }
+        showZoomIndicator = false
+    }
+
+    val transformState = rememberTransformableState { zoomChange, _, _ ->
+        val boundCamera = camera
+        val zoomInfo = boundCamera?.cameraInfo?.zoomState?.value
+        if (boundCamera != null && zoomInfo != null) {
+            val ratio = (zoomRatio * zoomChange).coerceIn(zoomInfo.minZoomRatio, zoomInfo.maxZoomRatio)
+            boundCamera.cameraControl.setZoomRatio(ratio)
+            zoomRatio = ratio
         }
     }
 
@@ -114,13 +174,16 @@ fun ScannerScreen(
             !ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.CAMERA)
     }
 
-    // Fires the success flash, waits briefly so the user sees it, then navigates to the result.
-    fun confirmScan(result: ScanResult) {
+    // Snaps the frame onto the code (when we know where it is), confirms with haptics,
+    // waits briefly so the user sees it, then navigates to the result.
+    fun confirmScan(result: ScanResult, box: DetectedBox? = null) {
         hasScanned = true
         showSuccessFlash = true
+        detectedRect = box?.toViewRect(viewSize)
+        Haptics.confirm(view)
         coroutineScope.launch {
-            delay(if (reducedMotion) 120 else 450)
-            onBarcodeScanned(result)
+            delay(if (animationsState) 500 else 120)
+            currentOnBarcodeScanned(result)
         }
     }
 
@@ -174,28 +237,48 @@ fun ScannerScreen(
         onDispose { cameraExecutor.shutdown() }
     }
 
+    val fadeInSpec = if (animations) fadeIn() else EnterTransition.None
+    val fadeOutSpec = if (animations) fadeOut() else ExitTransition.None
+
     Box(modifier = modifier.background(Color.Black)) {
         if (hasCameraPermission) {
             AndroidView(
                 factory = { ctx ->
-                    val previewView = PreviewView(ctx)
+                    // COMPATIBLE (TextureView) so the tab fade animation also fades the camera
+                    val previewView = PreviewView(ctx).apply {
+                        implementationMode = PreviewView.ImplementationMode.COMPATIBLE
+                        scaleType = PreviewView.ScaleType.FILL_CENTER
+                    }
                     val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
 
                     cameraProviderFuture.addListener({
                         val cameraProvider = cameraProviderFuture.get()
 
-                        val preview = Preview.Builder().build().also {
-                            it.setSurfaceProvider(previewView.surfaceProvider)
-                        }
+                        // Same 16:9 aspect for preview and analysis, so a point on the
+                        // analysed frame maps onto the preview without distortion.
+                        val resolutionSelector = ResolutionSelector.Builder()
+                            .setAspectRatioStrategy(AspectRatioStrategy.RATIO_16_9_FALLBACK_AUTO_STRATEGY)
+                            .setResolutionStrategy(
+                                ResolutionStrategy(
+                                    Size(1920, 1080),
+                                    ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER
+                                )
+                            )
+                            .build()
+
+                        val preview = Preview.Builder()
+                            .setResolutionSelector(resolutionSelector)
+                            .build()
+                            .also { it.setSurfaceProvider(previewView.surfaceProvider) }
 
                         val imageAnalysis = ImageAnalysis.Builder()
+                            .setResolutionSelector(resolutionSelector)
                             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                            .setTargetResolution(android.util.Size(1280, 720))
                             .build()
                             .also {
-                                it.setAnalyzer(cameraExecutor, BarcodeAnalyzer { result ->
+                                it.setAnalyzer(cameraExecutor, BarcodeAnalyzer { result, box ->
                                     if (isActiveState && !hasScanned) {
-                                        confirmScan(result)
+                                        confirmScan(result, box)
                                     }
                                 })
                             }
@@ -215,23 +298,26 @@ fun ScannerScreen(
 
                     previewView
                 },
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier
+                    .fillMaxSize()
+                    .onSizeChanged { viewSize = it }
             )
 
             // The preview runs behind the bottom nav; controls and the frame are laid out
-            // in the area above it so everything is centred in what the user can actually see.
+            // in the area above it. Both share the preview's top-left origin, so detected
+            // positions can be used here directly.
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .navigationBarsPadding()
-                    .padding(bottom = BottomNavHeight)
+                    .padding(bottom = bottomNavHeight())
+                    .transformable(state = transformState)
             ) {
-                ScanFrame(
+                ScanOverlay(
+                    detectedRect = detectedRect,
                     success = showSuccessFlash,
-                    reducedMotion = reducedMotion,
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .size(ScanFrameSize)
+                    animations = animations,
+                    modifier = Modifier.fillMaxSize()
                 )
 
                 Column(
@@ -246,8 +332,8 @@ fun ScannerScreen(
 
                     AnimatedVisibility(
                         visible = galleryScanFailed,
-                        enter = fadeIn(),
-                        exit = fadeOut(),
+                        enter = fadeInSpec,
+                        exit = fadeOutSpec,
                         modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
                     ) {
                         Surface(
@@ -278,6 +364,17 @@ fun ScannerScreen(
                         .padding(start = 24.dp, bottom = 24.dp)
                 )
 
+                AnimatedVisibility(
+                    visible = showZoomIndicator,
+                    enter = fadeInSpec,
+                    exit = fadeOutSpec,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 34.dp)
+                ) {
+                    ZoomIndicator(ratio = zoomRatio)
+                }
+
                 CircleIconButton(
                     icon = if (isFlashOn) Icons.Filled.FlashOn else Icons.Filled.FlashOff,
                     contentDescription = if (isFlashOn) "Turn flash off" else "Turn flash on",
@@ -306,6 +403,33 @@ fun ScannerScreen(
     }
 }
 
+/** Maps a box from the analysed frame onto a FILL_CENTER preview of [viewSize]. */
+private fun DetectedBox.toViewRect(viewSize: IntSize): Rect? {
+    if (viewSize == IntSize.Zero || imageWidth == 0 || imageHeight == 0) return null
+
+    val scale = max(viewSize.width / imageWidth.toFloat(), viewSize.height / imageHeight.toFloat())
+    val offsetX = (viewSize.width - imageWidth * scale) / 2f
+    val offsetY = (viewSize.height - imageHeight * scale) / 2f
+
+    return Rect(
+        left = rect.left * scale + offsetX,
+        top = rect.top * scale + offsetY,
+        right = rect.right * scale + offsetX,
+        bottom = rect.bottom * scale + offsetY
+    )
+}
+
+private fun Rect.coerceMinSide(minSide: Float): Rect {
+    val newWidth = max(width, minSide)
+    val newHeight = max(height, minSide)
+    return Rect(
+        left = center.x - newWidth / 2f,
+        top = center.y - newHeight / 2f,
+        right = center.x + newWidth / 2f,
+        bottom = center.y + newHeight / 2f
+    )
+}
+
 @Composable
 private fun ScanHint() {
     Surface(
@@ -332,83 +456,131 @@ private fun ScanHint() {
 }
 
 @Composable
-private fun ScanFrame(
+private fun ZoomIndicator(ratio: Float) {
+    Surface(
+        shape = CircleShape,
+        color = ScanScrim,
+        contentColor = Color.White
+    ) {
+        Text(
+            text = String.format(Locale.US, "%.1f×", ratio),
+            style = MaterialTheme.typography.labelLarge,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+        )
+    }
+}
+
+/**
+ * Corner brackets that rest in the centre of the screen and, once a code is detected,
+ * spring onto it. A check badge confirms the scan.
+ */
+@Composable
+private fun ScanOverlay(
+    detectedRect: Rect?,
     success: Boolean,
-    reducedMotion: Boolean,
+    animations: Boolean,
     modifier: Modifier = Modifier
 ) {
-    Box(modifier = modifier) {
-        ScanFrameCorners(success = success)
+    var size by remember { mutableStateOf(IntSize.Zero) }
+    val density = LocalDensity.current
 
-        AnimatedVisibility(
-            visible = success,
-            enter = if (reducedMotion) fadeIn() else scaleIn() + fadeIn(),
-            exit = if (reducedMotion) fadeOut() else scaleOut() + fadeOut(),
-            modifier = Modifier.align(Alignment.Center)
-        ) {
-            Surface(
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.tertiary,
-                modifier = Modifier.size(64.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Filled.Check,
-                        contentDescription = "Scan successful",
-                        tint = MaterialTheme.colorScheme.onTertiary,
-                        modifier = Modifier.size(36.dp)
+    Box(modifier = modifier.onSizeChanged { size = it }) {
+        if (size != IntSize.Zero) {
+            val defaultRect = Rect(
+                center = Offset(size.width / 2f, size.height / 2f),
+                radius = with(density) { ScanFrameSize.toPx() } / 2f
+            )
+            val target = detectedRect
+                ?.inflate(with(density) { DetectedPadding.toPx() })
+                ?.coerceMinSide(with(density) { DetectedMinSide.toPx() })
+                ?: defaultRect
+
+            val frame by animateRectAsState(
+                targetValue = target,
+                animationSpec = if (animations) {
+                    spring<Rect>(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow)
+                } else {
+                    snap<Rect>()
+                }
+            )
+            val frameColor by animateColorAsState(
+                targetValue = if (success) MaterialTheme.colorScheme.tertiary else Color.White,
+                label = "scanFrameColor"
+            )
+            val badgePx = with(density) { SuccessBadgeSize.toPx() }
+
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                drawCornerBrackets(frame, frameColor)
+            }
+
+            AnimatedVisibility(
+                visible = success,
+                enter = if (animations) scaleIn() + fadeIn() else EnterTransition.None,
+                exit = if (animations) scaleOut() + fadeOut() else ExitTransition.None,
+                modifier = Modifier.offset {
+                    IntOffset(
+                        (frame.center.x - badgePx / 2f).roundToInt(),
+                        (frame.center.y - badgePx / 2f).roundToInt()
                     )
+                }
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.tertiary,
+                    modifier = Modifier.size(SuccessBadgeSize)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Filled.Check,
+                            contentDescription = "Scan successful",
+                            tint = MaterialTheme.colorScheme.onTertiary,
+                            modifier = Modifier.size(36.dp)
+                        )
+                    }
                 }
             }
         }
     }
 }
 
-@Composable
-private fun ScanFrameCorners(success: Boolean) {
-    val color by animateColorAsState(
-        targetValue = if (success) MaterialTheme.colorScheme.tertiary else Color.White,
-        label = "scanFrameColor"
-    )
+private fun DrawScope.drawCornerBrackets(frame: Rect, color: Color) {
+    val strokeWidth = 4.dp.toPx()
+    val shortSide = min(frame.width, frame.height)
+    val arm = min(36.dp.toPx(), shortSide * 0.3f)
+    val radius = min(20.dp.toPx(), arm * 0.6f)
+    val left = frame.left + strokeWidth / 2
+    val top = frame.top + strokeWidth / 2
+    val right = frame.right - strokeWidth / 2
+    val bottom = frame.bottom - strokeWidth / 2
 
-    Canvas(modifier = Modifier.fillMaxSize()) {
-        val strokeWidth = 4.dp.toPx()
-        val arm = 36.dp.toPx()
-        val radius = 20.dp.toPx()
-        val left = strokeWidth / 2
-        val top = strokeWidth / 2
-        val right = size.width - strokeWidth / 2
-        val bottom = size.height - strokeWidth / 2
-
-        val corners = Path().apply {
-            // Top-left
-            moveTo(left, top + arm)
-            lineTo(left, top + radius)
-            arcTo(Rect(left, top, left + 2 * radius, top + 2 * radius), 180f, 90f, false)
-            lineTo(left + arm, top)
-            // Top-right
-            moveTo(right - arm, top)
-            lineTo(right - radius, top)
-            arcTo(Rect(right - 2 * radius, top, right, top + 2 * radius), 270f, 90f, false)
-            lineTo(right, top + arm)
-            // Bottom-right
-            moveTo(right, bottom - arm)
-            lineTo(right, bottom - radius)
-            arcTo(Rect(right - 2 * radius, bottom - 2 * radius, right, bottom), 0f, 90f, false)
-            lineTo(right - arm, bottom)
-            // Bottom-left
-            moveTo(left + arm, bottom)
-            lineTo(left + radius, bottom)
-            arcTo(Rect(left, bottom - 2 * radius, left + 2 * radius, bottom), 90f, 90f, false)
-            lineTo(left, bottom - arm)
-        }
-
-        drawPath(
-            path = corners,
-            color = color,
-            style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-        )
+    val corners = Path().apply {
+        // Top-left
+        moveTo(left, top + arm)
+        lineTo(left, top + radius)
+        arcTo(Rect(left, top, left + 2 * radius, top + 2 * radius), 180f, 90f, false)
+        lineTo(left + arm, top)
+        // Top-right
+        moveTo(right - arm, top)
+        lineTo(right - radius, top)
+        arcTo(Rect(right - 2 * radius, top, right, top + 2 * radius), 270f, 90f, false)
+        lineTo(right, top + arm)
+        // Bottom-right
+        moveTo(right, bottom - arm)
+        lineTo(right, bottom - radius)
+        arcTo(Rect(right - 2 * radius, bottom - 2 * radius, right, bottom), 0f, 90f, false)
+        lineTo(right - arm, bottom)
+        // Bottom-left
+        moveTo(left + arm, bottom)
+        lineTo(left + radius, bottom)
+        arcTo(Rect(left, bottom - 2 * radius, left + 2 * radius, bottom), 90f, 90f, false)
+        lineTo(left, bottom - arm)
     }
+
+    drawPath(
+        path = corners,
+        color = color,
+        style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+    )
 }
 
 @Composable
@@ -460,7 +632,7 @@ private fun CameraPermissionPrompt(
         modifier = Modifier
             .fillMaxSize()
             .navigationBarsPadding()
-            .padding(bottom = BottomNavHeight)
+            .padding(bottom = bottomNavHeight())
             .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -500,17 +672,5 @@ private fun CameraPermissionPrompt(
         ) {
             Text(if (permanentlyDenied) "Open settings" else "Grant permission")
         }
-    }
-}
-
-@Composable
-private fun rememberReducedMotion(): Boolean {
-    val view = LocalView.current
-    return remember(view) {
-        Settings.Global.getFloat(
-            view.context.contentResolver,
-            Settings.Global.ANIMATOR_DURATION_SCALE,
-            1f
-        ) == 0f
     }
 }

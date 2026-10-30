@@ -23,7 +23,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.scann.thekami.model.QrContentEncoder
 import com.scann.thekami.model.QrContentType
-import com.scann.thekami.ui.components.BottomNavClearance
+import com.scann.thekami.ui.components.bottomNavClearance
 import com.scann.thekami.util.QrCodeGenerator
 
 private val FieldRadius = 16.dp
@@ -280,7 +280,7 @@ fun GeneratorScreen() {
                     Text("Generate QR Code")
                 }
 
-                Spacer(modifier = Modifier.height(BottomNavClearance))
+                Spacer(modifier = Modifier.height(bottomNavClearance()))
             }
         }
     }
