@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Animation
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Info
@@ -23,12 +24,14 @@ import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.StarRate
+import androidx.compose.material.icons.filled.ViewAgenda
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontStyle
@@ -41,6 +44,9 @@ import com.google.android.play.core.review.ReviewManagerFactory
 import com.scann.thekami.BuildConfig
 import com.scann.thekami.R
 import com.scann.thekami.ui.components.bottomNavClearance
+import com.scann.thekami.util.AppPreferences
+import com.scann.thekami.util.AppSettings
+import com.scann.thekami.util.Haptics
 import com.scann.thekami.util.NotificationController
 
 private val CardRowPadding = 16.dp
@@ -52,8 +58,8 @@ private val IconTileSize = 38.dp
 @Composable
 fun SettingsScreen(
     onAboutClick: () -> Unit,
-    floatingNav: Boolean,
-    onFloatingNavChange: (Boolean) -> Unit
+    settings: AppSettings,
+    onSettingsChange: (AppSettings) -> Unit
 ) {
     val context = LocalContext.current
     var createNotificationEnabled by remember {
@@ -147,12 +153,30 @@ fun SettingsScreen(
 
             SectionLabel("Appearance")
             SettingsCard {
+                if (AppPreferences.dynamicColorSupported) {
+                    SwitchRow(
+                        icon = Icons.Filled.Palette,
+                        title = "Dynamic colors",
+                        subtitle = "Match the app to your wallpaper colors",
+                        checked = settings.dynamicColor,
+                        onCheckedChange = { onSettingsChange(settings.copy(dynamicColor = it)) }
+                    )
+                    SettingsDivider()
+                }
                 SwitchRow(
-                    icon = Icons.Filled.Palette,
+                    icon = Icons.Filled.ViewAgenda,
                     title = "Floating navigation bar",
-                    subtitle = "Show the bar as a floating pill instead of docking it to the bottom",
-                    checked = floatingNav,
-                    onCheckedChange = onFloatingNavChange
+                    subtitle = "Show a compact floating bar instead of docking it to the bottom",
+                    checked = settings.floatingNav,
+                    onCheckedChange = { onSettingsChange(settings.copy(floatingNav = it)) }
+                )
+                SettingsDivider()
+                SwitchRow(
+                    icon = Icons.Filled.Animation,
+                    title = "Animations",
+                    subtitle = "Tab transitions and scan animations",
+                    checked = settings.animations,
+                    onCheckedChange = { onSettingsChange(settings.copy(animations = it)) }
                 )
             }
 
@@ -335,13 +359,18 @@ private fun SwitchRow(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
+    val view = LocalView.current
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .toggleable(
                 value = checked,
                 role = Role.Switch,
-                onValueChange = onCheckedChange
+                onValueChange = {
+                    Haptics.tick(view)
+                    onCheckedChange(it)
+                }
             )
             .padding(CardRowPadding),
         verticalAlignment = Alignment.CenterVertically

@@ -1,11 +1,19 @@
 package com.scann.thekami.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material.icons.filled.QrCodeScanner
@@ -26,8 +34,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.selected
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -43,7 +49,7 @@ enum class NavTab(val label: String, val icon: ImageVector) {
  */
 enum class NavBarStyle(val overlap: Dp) {
     DOCKED(80.dp),
-    FLOATING(96.dp) // 72dp pill + 24dp bottom margin
+    FLOATING(80.dp) // 64dp pill + 16dp bottom margin
 }
 
 val LocalNavBarStyle = staticCompositionLocalOf { NavBarStyle.DOCKED }
@@ -56,10 +62,9 @@ fun bottomNavHeight(): Dp = LocalNavBarStyle.current.overlap
 @Composable
 fun bottomNavClearance(): Dp = bottomNavHeight() + 16.dp
 
-// Nested-radius formula: Outer R = Inner R + Padding
-private val NavBarPadding = 8.dp
-private val NavItemRadius = 20.dp
-private val NavBarRadius = NavItemRadius + NavBarPadding // 28.dp
+private val PillHeight = 64.dp
+private val PillPadding = 6.dp
+private val PillItemHeight = PillHeight - PillPadding * 2
 
 @Composable
 fun BottomNavBar(
@@ -98,6 +103,7 @@ private fun DockedNavBar(
     }
 }
 
+/** Compact pill that hugs its content: only the selected tab shows its label. */
 @Composable
 private fun FloatingNavBar(
     selectedTab: NavTab,
@@ -105,20 +111,18 @@ private fun FloatingNavBar(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        shape = RoundedCornerShape(NavBarRadius),
+        shape = CircleShape,
         color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 2.dp,
-        shadowElevation = 6.dp,
+        tonalElevation = 3.dp,
+        shadowElevation = 4.dp,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
         modifier = modifier
-            .padding(horizontal = 32.dp)
-            .padding(bottom = 24.dp)
+            .padding(bottom = 16.dp)
             .navigationBarsPadding()
-            .height(72.dp)
+            .height(PillHeight)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxHeight()
-                .padding(NavBarPadding),
+            modifier = Modifier.padding(PillPadding),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -126,10 +130,7 @@ private fun FloatingNavBar(
                 FloatingNavItem(
                     tab = tab,
                     selected = tab == selectedTab,
-                    onClick = { onTabSelected(tab) },
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
+                    onClick = { onTabSelected(tab) }
                 )
             }
         }
@@ -140,53 +141,53 @@ private fun FloatingNavBar(
 private fun FloatingNavItem(
     tab: NavTab,
     selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    onClick: () -> Unit
 ) {
+    val animations = LocalAnimationsEnabled.current
+    val colorSpec = tween<Color>(durationMillis = if (animations) 250 else 0)
+
     val backgroundColor by animateColorAsState(
-        targetValue = if (selected) {
-            MaterialTheme.colorScheme.primaryContainer
-        } else {
-            Color.Transparent
-        },
-        animationSpec = tween(durationMillis = 250),
+        targetValue = if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+        animationSpec = colorSpec,
         label = "navItemBackground"
     )
-
     val contentColor by animateColorAsState(
         targetValue = if (selected) {
-            MaterialTheme.colorScheme.primary
+            MaterialTheme.colorScheme.onPrimaryContainer
         } else {
             MaterialTheme.colorScheme.onSurfaceVariant
         },
-        animationSpec = tween(durationMillis = 250),
+        animationSpec = colorSpec,
         label = "navItemColor"
     )
 
-    Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(NavItemRadius))
+    Row(
+        modifier = Modifier
+            .height(PillItemHeight)
+            .clip(CircleShape)
             .background(backgroundColor)
-            .selectable(
-                selected = selected,
-                role = Role.Tab,
-                onClick = onClick
-            )
-            .semantics { this.selected = selected },
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .selectable(selected = selected, role = Role.Tab, onClick = onClick)
+            .padding(horizontal = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             imageVector = tab.icon,
-            contentDescription = tab.label,
+            contentDescription = if (selected) null else tab.label,
             tint = contentColor,
-            modifier = Modifier.size(22.dp)
+            modifier = Modifier.size(24.dp)
         )
-        Spacer(modifier = Modifier.height(3.dp))
-        Text(
-            text = tab.label,
-            color = contentColor,
-            style = MaterialTheme.typography.labelSmall
-        )
+        AnimatedVisibility(
+            visible = selected,
+            enter = if (animations) fadeIn() + expandHorizontally() else EnterTransition.None,
+            exit = if (animations) fadeOut() + shrinkHorizontally() else ExitTransition.None
+        ) {
+            Text(
+                text = tab.label,
+                color = contentColor,
+                style = MaterialTheme.typography.labelLarge,
+                maxLines = 1,
+                modifier = Modifier.padding(start = 8.dp)
+            )
+        }
     }
 }
