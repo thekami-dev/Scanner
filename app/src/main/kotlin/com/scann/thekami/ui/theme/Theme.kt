@@ -58,6 +58,8 @@ fun ScannTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // true = dark status bar icons (for light backgrounds)
     lightStatusBarIcons: Boolean = !darkTheme,
+    // true = dark navigation bar icons
+    lightNavBarIcons: Boolean = !darkTheme,
     content: @Composable () -> Unit
 ) {
     val colorScheme = if (darkTheme) DarkColors else LightColors
@@ -68,7 +70,7 @@ fun ScannTheme(
             val window = (view.context as Activity).window
             WindowCompat.getInsetsController(window, view).apply {
                 isAppearanceLightStatusBars = lightStatusBarIcons
-                isAppearanceLightNavigationBars = !darkTheme
+                isAppearanceLightNavigationBars = lightNavBarIcons
             }
         }
     }

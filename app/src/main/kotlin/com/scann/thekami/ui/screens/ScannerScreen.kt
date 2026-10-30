@@ -58,7 +58,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.scann.thekami.camera.BarcodeAnalyzer
 import com.scann.thekami.model.ScanResult
-import com.scann.thekami.ui.components.BottomNavHeight
+import com.scann.thekami.ui.components.bottomNavHeight
 import com.scann.thekami.util.GalleryScanner
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -224,7 +224,7 @@ fun ScannerScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .navigationBarsPadding()
-                    .padding(bottom = BottomNavHeight)
+                    .padding(bottom = bottomNavHeight())
             ) {
                 ScanFrame(
                     success = showSuccessFlash,
@@ -460,7 +460,7 @@ private fun CameraPermissionPrompt(
         modifier = Modifier
             .fillMaxSize()
             .navigationBarsPadding()
-            .padding(bottom = BottomNavHeight)
+            .padding(bottom = bottomNavHeight())
             .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center

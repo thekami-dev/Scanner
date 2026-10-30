@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.StarRate
 import androidx.compose.material3.*
@@ -39,7 +40,7 @@ import coil.compose.AsyncImage
 import com.google.android.play.core.review.ReviewManagerFactory
 import com.scann.thekami.BuildConfig
 import com.scann.thekami.R
-import com.scann.thekami.ui.components.BottomNavClearance
+import com.scann.thekami.ui.components.bottomNavClearance
 import com.scann.thekami.util.NotificationController
 
 private val CardRowPadding = 16.dp
@@ -50,7 +51,9 @@ private val IconTileSize = 38.dp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    onAboutClick: () -> Unit
+    onAboutClick: () -> Unit,
+    floatingNav: Boolean,
+    onFloatingNavChange: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
     var createNotificationEnabled by remember {
@@ -125,15 +128,31 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp)
-                .padding(bottom = BottomNavClearance)
+                .padding(bottom = bottomNavClearance())
         ) {
             Spacer(modifier = Modifier.height(4.dp))
 
             SectionLabel("Quick access")
             SettingsCard {
-                NotificationSettingRow(
-                    enabled = createNotificationEnabled,
+                SwitchRow(
+                    icon = Icons.Filled.NotificationsActive,
+                    title = "Create QR shortcut",
+                    subtitle = "Adds a quick shortcut to create a QR code from your notifications",
+                    checked = createNotificationEnabled,
                     onCheckedChange = ::onNotificationToggle
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            SectionLabel("Appearance")
+            SettingsCard {
+                SwitchRow(
+                    icon = Icons.Filled.Palette,
+                    title = "Floating navigation bar",
+                    subtitle = "Show the bar as a floating pill instead of docking it to the bottom",
+                    checked = floatingNav,
+                    onCheckedChange = onFloatingNavChange
                 )
             }
 
@@ -309,33 +328,36 @@ private fun SettingsDivider() {
 }
 
 @Composable
-private fun NotificationSettingRow(
-    enabled: Boolean,
+private fun SwitchRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .toggleable(
-                value = enabled,
+                value = checked,
                 role = Role.Switch,
                 onValueChange = onCheckedChange
             )
             .padding(CardRowPadding),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconTile(Icons.Filled.NotificationsActive)
+        IconTile(icon)
         Spacer(modifier = Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text("Create QR shortcut", style = MaterialTheme.typography.bodyLarge)
+            Text(title, style = MaterialTheme.typography.bodyLarge)
             Text(
-                "Adds a quick shortcut to create a QR code from your notifications",
+                subtitle,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         Spacer(modifier = Modifier.width(8.dp))
-        Switch(checked = enabled, onCheckedChange = null)
+        Switch(checked = checked, onCheckedChange = null)
     }
 }
 
