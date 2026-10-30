@@ -1,5 +1,6 @@
 package com.scann.thekami.camera
 
+import android.graphics.Rect
 import androidx.annotation.OptIn
 import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
@@ -11,8 +12,18 @@ import com.google.mlkit.vision.common.InputImage
 import com.scann.thekami.model.BarcodeParser
 import com.scann.thekami.model.ScanResult
 
+/**
+ * Where a barcode was found, in the coordinates of the upright camera frame
+ * ([imageWidth] x [imageHeight]) so the UI can map it onto the preview.
+ */
+data class DetectedBox(
+    val rect: Rect,
+    val imageWidth: Int,
+    val imageHeight: Int
+)
+
 class BarcodeAnalyzer(
-    private val onResult: (ScanResult) -> Unit
+    private val onResult: (ScanResult, DetectedBox?) -> Unit
 ) : ImageAnalysis.Analyzer {
 
     private val options = BarcodeScannerOptions.Builder()
@@ -36,13 +47,18 @@ class BarcodeAnalyzer(
         }
 
         isProcessing = true
-        val inputImage = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
+        val rotation = imageProxy.imageInfo.rotationDegrees
+        val swapped = rotation == 90 || rotation == 270
+        val imageWidth = if (swapped) imageProxy.height else imageProxy.width
+        val imageHeight = if (swapped) imageProxy.width else imageProxy.height
+        val inputImage = InputImage.fromMediaImage(mediaImage, rotation)
 
         scanner.process(inputImage)
             .addOnSuccessListener { barcodes ->
                 val firstValid = barcodes.firstOrNull { !it.rawValue.isNullOrBlank() }
                 if (firstValid != null) {
-                    onResult(BarcodeParser.parse(firstValid))
+                    val box = firstValid.boundingBox?.let { DetectedBox(it, imageWidth, imageHeight) }
+                    onResult(BarcodeParser.parse(firstValid), box)
                 }
             }
             .addOnFailureListener {

@@ -29,8 +29,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
-import com.scann.thekami.ui.components.BottomNavClearance
-import com.scann.thekami.ui.components.BottomNavHeight
+import com.scann.thekami.ui.components.bottomNavClearance
+import com.scann.thekami.ui.components.bottomNavHeight
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
@@ -153,7 +153,7 @@ fun QrResultScreen(
         },
         // The bottom nav bar overlays this screen, so lift the snackbar above it
         snackbarHost = {
-            SnackbarHost(snackbarHostState, modifier = Modifier.padding(bottom = BottomNavHeight))
+            SnackbarHost(snackbarHostState, modifier = Modifier.padding(bottom = bottomNavHeight()))
         }
     ) { padding ->
         Column(
@@ -161,7 +161,7 @@ fun QrResultScreen(
                 .padding(padding)
                 .fillMaxSize()
                 .padding(24.dp)
-                .padding(bottom = BottomNavClearance),
+                .padding(bottom = bottomNavClearance()),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {

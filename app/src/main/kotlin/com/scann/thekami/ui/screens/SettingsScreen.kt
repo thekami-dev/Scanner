@@ -16,18 +16,22 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Animation
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.StarRate
+import androidx.compose.material.icons.filled.ViewAgenda
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontStyle
@@ -39,7 +43,10 @@ import coil.compose.AsyncImage
 import com.google.android.play.core.review.ReviewManagerFactory
 import com.scann.thekami.BuildConfig
 import com.scann.thekami.R
-import com.scann.thekami.ui.components.BottomNavClearance
+import com.scann.thekami.ui.components.bottomNavClearance
+import com.scann.thekami.util.AppPreferences
+import com.scann.thekami.util.AppSettings
+import com.scann.thekami.util.Haptics
 import com.scann.thekami.util.NotificationController
 
 private val CardRowPadding = 16.dp
@@ -50,7 +57,9 @@ private val IconTileSize = 38.dp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    onAboutClick: () -> Unit
+    onAboutClick: () -> Unit,
+    settings: AppSettings,
+    onSettingsChange: (AppSettings) -> Unit
 ) {
     val context = LocalContext.current
     var createNotificationEnabled by remember {
@@ -125,15 +134,49 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp)
-                .padding(bottom = BottomNavClearance)
+                .padding(bottom = bottomNavClearance())
         ) {
             Spacer(modifier = Modifier.height(4.dp))
 
             SectionLabel("Quick access")
             SettingsCard {
-                NotificationSettingRow(
-                    enabled = createNotificationEnabled,
+                SwitchRow(
+                    icon = Icons.Filled.NotificationsActive,
+                    title = "Create QR shortcut",
+                    subtitle = "Adds a quick shortcut to create a QR code from your notifications",
+                    checked = createNotificationEnabled,
                     onCheckedChange = ::onNotificationToggle
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            SectionLabel("Appearance")
+            SettingsCard {
+                if (AppPreferences.dynamicColorSupported) {
+                    SwitchRow(
+                        icon = Icons.Filled.Palette,
+                        title = "Dynamic colors",
+                        subtitle = "Match the app to your wallpaper colors",
+                        checked = settings.dynamicColor,
+                        onCheckedChange = { onSettingsChange(settings.copy(dynamicColor = it)) }
+                    )
+                    SettingsDivider()
+                }
+                SwitchRow(
+                    icon = Icons.Filled.ViewAgenda,
+                    title = "Floating navigation bar",
+                    subtitle = "Show a compact floating bar instead of docking it to the bottom",
+                    checked = settings.floatingNav,
+                    onCheckedChange = { onSettingsChange(settings.copy(floatingNav = it)) }
+                )
+                SettingsDivider()
+                SwitchRow(
+                    icon = Icons.Filled.Animation,
+                    title = "Animations",
+                    subtitle = "Tab transitions and scan animations",
+                    checked = settings.animations,
+                    onCheckedChange = { onSettingsChange(settings.copy(animations = it)) }
                 )
             }
 
@@ -309,33 +352,41 @@ private fun SettingsDivider() {
 }
 
 @Composable
-private fun NotificationSettingRow(
-    enabled: Boolean,
+private fun SwitchRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
+    val view = LocalView.current
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .toggleable(
-                value = enabled,
+                value = checked,
                 role = Role.Switch,
-                onValueChange = onCheckedChange
+                onValueChange = {
+                    Haptics.tick(view)
+                    onCheckedChange(it)
+                }
             )
             .padding(CardRowPadding),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconTile(Icons.Filled.NotificationsActive)
+        IconTile(icon)
         Spacer(modifier = Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text("Create QR shortcut", style = MaterialTheme.typography.bodyLarge)
+            Text(title, style = MaterialTheme.typography.bodyLarge)
             Text(
-                "Adds a quick shortcut to create a QR code from your notifications",
+                subtitle,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         Spacer(modifier = Modifier.width(8.dp))
-        Switch(checked = enabled, onCheckedChange = null)
+        Switch(checked = checked, onCheckedChange = null)
     }
 }
 
